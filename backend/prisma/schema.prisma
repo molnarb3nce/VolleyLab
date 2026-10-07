@@ -1,0 +1,279 @@
+// VolleyLab database schema.
+// See project-context.md (sections 4-8) for the reasoning behind the model.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+/// Permanent role of a player inside their team.
+enum PlayerRole {
+  SETTER
+  OUTSIDE_HITTER
+  MIDDLE_BLOCKER
+  OPPOSITE
+  LIBERO
+}
+
+/// Strategy templates. The slots of each formation live in code (src/formations).
+enum Formation {
+  FIVE_ONE
+  SIX_TWO
+  FOUR_TWO
+}
+
+/// Court position slot inside a formation. Not a player role: two players
+/// with the same role occupy different slots (e.g. MIDDLE_1 / MIDDLE_2).
+enum Slot {
+  SETTER_1
+  SETTER_2
+  OPPOSITE
+  OUTSIDE_1
+  OUTSIDE_2
+  MIDDLE_1
+  MIDDLE_2
+  LIBERO
+}
+
+enum MatchStatus {
+  PLANNED
+  IN_PROGRESS
+  FINISHED
+}
+
+enum MatchSide {
+  HOME
+  AWAY
+}
+
+enum SetStatus {
+  IN_PROGRESS
+  FINISHED
+}
+
+enum EventAction {
+  SERVE
+  RECEPTION
+  SET
+  ATTACK
+  BLOCK
+  DIG
+}
+
+/// One enum for all actions. Which results are valid for which action is a
+/// business rule enforced in the service layer (see project-context.md, section 7):
+///   SERVE     ACE, IN_PLAY, ERROR
+///   RECEPTION PERFECT, GOOD, POOR, ERROR
+///   SET       GOOD, POOR, ERROR
+///   ATTACK    KILL, IN_PLAY, BLOCKED, ERROR
+///   BLOCK     POINT, TOUCH, ERROR
+///   DIG       GOOD, POOR, ERROR
+enum EventResult {
+  ACE
+  IN_PLAY
+  ERROR
+  PERFECT
+  GOOD
+  POOR
+  KILL
+  BLOCKED
+  POINT
+  TOUCH
+}
+
+enum ActorSide {
+  OWN
+  OPPONENT
+  BALL
+}
+
+enum TacticAction {
+  MOVE
+  RECEIVE
+  SET
+  ATTACK
+  BLOCK
+}
+
+// ---------------------------------------------------------------------------
+// Users, teams, players
+// ---------------------------------------------------------------------------
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  teams   Team[]
+  matches Match[]
+  tactics Tactic[]
+}
+
+/// Teams are readable/usable by every user, but only the owner may edit them.
+model Team {
+  id        Int      @id @default(autoincrement())
+  ownerId   Int
+  name      String
+  createdAt DateTime @default(now())
+
+  owner      User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  players    Player[]
+  matchTeams MatchTeam[]
+
+  @@index([ownerId])
+}
+
+model Player {
+  id           Int        @id @default(autoincrement())
+  teamId       Int
+  name         String
+  jerseyNumber Int
+  role         PlayerRole
+  /// Players that already have events are soft-deleted (isActive = false).
+  isActive     Boolean    @default(true)
+
+  team        Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  lineupSlots MatchLineupSlot[]
+  events      MatchEvent[]
+
+  @@unique([teamId, jerseyNumber])
+  @@index([teamId])
+}
+
+// ---------------------------------------------------------------------------
+// Matches
+// ---------------------------------------------------------------------------
+
+model Match {
+  id       Int         @id @default(autoincrement())
+  ownerId  Int
+  playedAt DateTime    @default(now())
+  status   MatchStatus @default(PLANNED)
+
+  owner  User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  teams  MatchTeam[]
+  sets   MatchSet[]
+  events MatchEvent[]
+
+  @@index([ownerId])
+}
+
+/// Exactly two rows per match (HOME and AWAY). The unique (matchId, teamId)
+/// constraint guarantees that a team cannot play against itself.
+model MatchTeam {
+  id        Int       @id @default(autoincrement())
+  matchId   Int
+  teamId    Int
+  side      MatchSide
+  formation Formation
+
+  match  Match             @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  team   Team              @relation(fields: [teamId], references: [id], onDelete: Restrict)
+  lineup MatchLineupSlot[]
+
+  @@unique([matchId, side])
+  @@unique([matchId, teamId])
+  @@index([teamId])
+}
+
+/// Current lineup only (it can be changed at any time). Events reference the
+/// player directly, so changing the lineup never rewrites history.
+model MatchLineupSlot {
+  id          Int  @id @default(autoincrement())
+  matchTeamId Int
+  slot        Slot
+  playerId    Int
+
+  matchTeam MatchTeam @relation(fields: [matchTeamId], references: [id], onDelete: Cascade)
+  player    Player    @relation(fields: [playerId], references: [id], onDelete: Restrict)
+
+  @@unique([matchTeamId, slot])
+  @@unique([matchTeamId, playerId])
+  @@index([playerId])
+}
+
+/// Scores are entered manually and are NOT derived from events.
+model MatchSet {
+  id        Int       @id @default(autoincrement())
+  matchId   Int
+  setNumber Int
+  homeScore Int       @default(0)
+  awayScore Int       @default(0)
+  status    SetStatus @default(IN_PROGRESS)
+
+  match  Match        @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  events MatchEvent[]
+
+  @@unique([matchId, setNumber])
+  // Target of the composite FK in MatchEvent: an event's set must belong to the event's match.
+  @@unique([id, matchId])
+}
+
+/// Source of truth for statistics. The team of an event is derived via player.teamId.
+model MatchEvent {
+  id        Int         @id @default(autoincrement())
+  matchId   Int
+  setId     Int
+  playerId  Int
+  action    EventAction
+  result    EventResult
+  createdAt DateTime    @default(now())
+
+  match  Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  set    MatchSet @relation(fields: [setId, matchId], references: [id, matchId], onDelete: Cascade)
+  player Player   @relation(fields: [playerId], references: [id], onDelete: Restrict)
+
+  @@index([matchId])
+  @@index([setId])
+  @@index([playerId])
+}
+
+// ---------------------------------------------------------------------------
+// Tactics
+// ---------------------------------------------------------------------------
+
+/// Owned by a user, never by a team. Steps reference formation slots, not players.
+model Tactic {
+  id                Int       @id @default(autoincrement())
+  ownerId           Int
+  name              String
+  description       String?
+  formation         Formation
+  opponentFormation Formation
+  createdAt         DateTime  @default(now())
+
+  owner User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  steps TacticStep[]
+
+  @@index([ownerId])
+}
+
+model TacticStep {
+  id         Int          @id @default(autoincrement())
+  tacticId   Int
+  stepNumber Int
+  actorSide  ActorSide
+  /// Acting slot (null for the ball).
+  slot       Slot?
+  /// Target slot for actions such as "setter sets middle blocker".
+  targetSlot Slot?
+  action     TacticAction
+  /// Court coordinates, see project-context.md section 10 (x 0..9, y 0..18).
+  x          Float
+  y          Float
+  /// Animation duration in milliseconds.
+  duration   Int
+
+  tactic Tactic @relation(fields: [tacticId], references: [id], onDelete: Cascade)
+
+  @@unique([tacticId, stepNumber])
+}
