@@ -1,14 +1,14 @@
-import { bearer, createTestApp, registerUser, resetDatabase, TestContext, TestUser } from './helpers';
-
-const ROSTER = [
-  ['SETTER', 'SETTER'],
-  ['OPPOSITE', 'OPPOSITE'],
-  ['OUTSIDE_HITTER', 'OUTSIDE_HITTER'],
-  ['OUTSIDE_HITTER', 'OUTSIDE_HITTER'],
-  ['MIDDLE_BLOCKER', 'MIDDLE_BLOCKER'],
-  ['MIDDLE_BLOCKER', 'MIDDLE_BLOCKER'],
-  ['LIBERO', 'LIBERO'],
-] as const;
+import {
+  bearer,
+  createMatch as createMatchHelper,
+  createTeamWithRoster,
+  createTestApp,
+  fiveOneLineup,
+  registerUser,
+  resetDatabase,
+  TestContext,
+  TestUser,
+} from './helpers';
 
 describe('Formations and matches (e2e)', () => {
   let ctx: TestContext;
@@ -25,44 +25,9 @@ describe('Formations and matches (e2e)', () => {
   });
   afterAll(() => ctx.app.close());
 
-  /** Creates a team with a full roster; returns the team id and player ids in ROSTER order. */
-  const createTeam = async (user: TestUser, name: string) => {
-    const team = (await ctx.http().post('/teams').set(bearer(user)).send({ name }).expect(201)).body;
-    const players: number[] = [];
-    for (const [i, [, role]] of ROSTER.entries()) {
-      const res = await ctx
-        .http()
-        .post(`/teams/${team.id}/players`)
-        .set(bearer(user))
-        .send({ name: `P${i}`, jerseyNumber: i + 1, role })
-        .expect(201);
-      players.push(res.body.id);
-    }
-    return { id: team.id as number, players };
-  };
-
-  const fiveOneLineup = (p: number[]) => [
-    { slot: 'SETTER_1', playerId: p[0] },
-    { slot: 'OPPOSITE', playerId: p[1] },
-    { slot: 'OUTSIDE_1', playerId: p[2] },
-    { slot: 'OUTSIDE_2', playerId: p[3] },
-    { slot: 'MIDDLE_1', playerId: p[4] },
-    { slot: 'MIDDLE_2', playerId: p[5] },
-    { slot: 'LIBERO', playerId: p[6] },
-  ];
-
-  const createMatch = async (user: TestUser, homeId: number, awayId: number) =>
-    (
-      await ctx
-        .http()
-        .post('/matches')
-        .set(bearer(user))
-        .send({
-          home: { teamId: homeId, formation: 'FIVE_ONE' },
-          away: { teamId: awayId, formation: 'FIVE_ONE' },
-        })
-        .expect(201)
-    ).body;
+  const createTeam = (user: TestUser, name: string) => createTeamWithRoster(ctx, user, name);
+  const createMatch = (user: TestUser, homeId: number, awayId: number) =>
+    createMatchHelper(ctx, user, homeId, awayId);
 
   const putLineup = (user: TestUser, matchId: number, side: string, body: object) =>
     ctx.http().put(`/matches/${matchId}/teams/${side}/lineup`).set(bearer(user)).send(body);

@@ -131,7 +131,8 @@ export class MatchesService {
     return this.getOwnedMatch(userId, matchId);
   }
 
-  private async getOwnedMatch(userId: number, matchId: number): Promise<MatchWithDetails> {
+  /** Returns the match with details if it belongs to the user; 404 otherwise. */
+  async getOwnedMatch(userId: number, matchId: number): Promise<MatchWithDetails> {
     const match = await this.prisma.match.findUnique({
       where: { id: matchId },
       include: matchInclude,
@@ -148,3 +149,4 @@ function hasCompleteLineup(matchTeam: MatchWithDetails['teams'][number]): boolea
     matchTeam.lineup.some((entry) => entry.slot === slot),
   );
 }
+
