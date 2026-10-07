@@ -1,0 +1,27 @@
+﻿node.exe : PASS src/statistics/statistics.spec.ts
+At C:\Users\yougo\AppData\Roaming\npm\npx.ps1:24 char:5
++     & "node$exe"  "$basedir/node_modules/npx/index.js" $args
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (PASS src/statistics/statistics.spec.ts:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  computeStats
+    ÔłÜ returns zeros without events (5 ms)
+    ÔłÜ counts a reception error as an attempt and an error
+    ÔłÜ counts aces and serve errors
+    ÔłÜ counts block points, touches and errors
+    ÔłÜ counts reception quality, sets and digs (1 ms)
+    ÔłÜ aggregates many events (for example from several sets)
+    attack
+      ÔłÜ counts an attack kill as an attempt and a kill
+      ÔłÜ counts an attack error as an attempt and an error, not as a kill
+      ÔłÜ counts a blocked attack as an attempt and blocked, not as a kill
+      ÔłÜ counts a ball kept in play only as an attempt
+      ÔłÜ does not count other actions as attack kills
+
+Test Suites: 1 passed, 1 total
+Tests:       11 passed, 11 total
+Snapshots:   0 total
+Time:        3.876 s, estimated 5 s
+Ran all test suites matching /src\\statistics/i.
+

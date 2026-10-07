@@ -8,6 +8,7 @@ import { HealthController } from './health/health.controller';
 import { MatchesModule } from './matches/matches.module';
 import { PlayersModule } from './players/players.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { StatisticsModule } from './statistics/statistics.module';
 import { TeamsModule } from './teams/teams.module';
 
 @Module({
@@ -19,6 +20,7 @@ import { TeamsModule } from './teams/teams.module';
     TeamsModule,
     PlayersModule,
     MatchesModule,
+    StatisticsModule,
   ],
   controllers: [HealthController, FormationsController],
   providers: [{ provide: APP_GUARD, useClass: JwtAuthGuard }],

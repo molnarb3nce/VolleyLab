@@ -1,0 +1,102 @@
+﻿node.exe : FAIL src/statistics/statistics.spec.ts
+At C:\Users\yougo\AppData\Roaming\npm\npx.ps1:24 char:5
++     & "node$exe"  "$basedir/node_modules/npx/index.js" $args
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (FAIL src/statistics/statistics.spec.ts:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  computeStats
+    ÔłÜ returns zeros without events (5 ms)
+    ÔłÜ counts a reception error as an attempt and an error (1 ms)
+    ÔłÜ counts aces and serve errors
+    ÔłÜ counts block points, touches and errors (1 ms)
+    ÔłÜ counts reception quality, sets and digs (1 ms)
+    ├Ś aggregates many events (for example from several sets) (1 ms)
+    attack
+      ÔłÜ counts an attack kill as an attempt and a kill
+      ÔłÜ counts an attack error as an attempt and an error, not as a kill (1 ms)
+      ├Ś counts a blocked attack as an attempt and blocked, not as a kill (3 ms)
+      ├Ś counts a ball kept in play only as an attempt (1 ms)
+      ÔłÜ does not count other actions as attack kills
+
+  ÔŚĆ computeStats ÔÇ║ attack ÔÇ║ counts a blocked attack as an attempt and blocked, not as a kill
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+        "attempts": 1,
+        "blocked": 1,
+        "errors": 0,
+    -   "kills": 0,
+    +   "kills": 1,
+      }
+
+      22 |     it('counts a blocked attack as an attempt and blocked, not as a kill', () => {
+      23 |       const { attack } = computeStats([ev('ATTACK', 'BLOCKED')]);
+    > 24 |       expect(attack).toEqual({ attempts: 1, kills: 0, blocked: 1, errors: 0 });
+         |                      ^
+      25 |     });
+      26 |
+      27 |     it('counts a ball kept in play only as an attempt', () => {
+
+      at Object.<anonymous> (statistics/statistics.spec.ts:24:22)
+
+  ÔŚĆ computeStats ÔÇ║ attack ÔÇ║ counts a ball kept in play only as an attempt
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+        "attempts": 1,
+        "blocked": 0,
+        "errors": 0,
+    -   "kills": 0,
+    +   "kills": 1,
+      }
+
+      27 |     it('counts a ball kept in play only as an attempt', () => {
+      28 |       const { attack } = computeStats([ev('ATTACK', 'IN_PLAY')]);
+    > 29 |       expect(attack).toEqual({ attempts: 1, kills: 0, blocked: 0, errors: 0 });
+         |                      ^
+      30 |     });
+      31 |
+      32 |     it('does not count other actions as attack kills', () => {
+
+      at Object.<anonymous> (statistics/statistics.spec.ts:29:22)
+
+  ÔŚĆ computeStats ÔÇ║ aggregates many events (for example from several sets)
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+        "attempts": 5,
+        "blocked": 1,
+        "errors": 1,
+    -   "kills": 2,
+    +   "kills": 4,
+      }
+
+      68 |     const set1 = [ev('ATTACK', 'KILL'), ev('ATTACK', 'ERROR')];
+      69 |     const set2 = [ev('ATTACK', 'KILL'), ev('ATTACK', 'BLOCKED'), ev('ATTACK', 'IN_PLAY')];
+    > 70 |     expect(computeStats([...set1, ...set2]).attack).toEqual({
+         |                                                     ^
+      71 |       attempts: 5,
+      72 |       kills: 2,
+      73 |       blocked: 1,
+
+      at Object.<anonymous> (statistics/statistics.spec.ts:70:53)
+
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 8 passed, 11 total
+Snapshots:   0 total
+Time:        4.545 s
+Ran all test suites matching /src\\statistics/i.
+

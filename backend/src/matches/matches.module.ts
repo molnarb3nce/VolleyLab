@@ -8,5 +8,6 @@ import { SetsService } from './sets.service';
 @Module({
   controllers: [MatchesController, SetsEventsController],
   providers: [MatchesService, SetsService, EventsService],
+  exports: [MatchesService],
 })
 export class MatchesModule {}
