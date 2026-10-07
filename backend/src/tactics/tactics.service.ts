@@ -5,10 +5,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import {
   CreateTacticDto,
   SetStepsDto,
-  TacticStepDto,
   UpdateTacticDto,
   ValidateTacticDto,
 } from './dto/tactic.dto';
+import { TacticStepDto } from './dto/tactic-step.dto';
 import { validatePlay, validateSteps } from './tactic-rules';
 
 const withSteps = { steps: { orderBy: { stepNumber: 'asc' } } } satisfies Prisma.TacticInclude;
@@ -153,3 +153,4 @@ function toStepRows(steps: TacticStepDto[]) {
     duration: s.duration,
   }));
 }
+

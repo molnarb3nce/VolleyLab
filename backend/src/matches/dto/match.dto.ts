@@ -1,24 +1,15 @@
-import { Formation, MatchStatus, Slot } from '@prisma/client';
+import { Formation, MatchStatus } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
   IsDateString,
   IsEnum,
-  IsInt,
   IsOptional,
-  Min,
   ValidateNested,
 } from 'class-validator';
-
-export class MatchSideDto {
-  @IsInt()
-  @Min(1)
-  teamId!: number;
-
-  @IsEnum(Formation)
-  formation!: Formation;
-}
+import { LineupEntryDto } from './lineup-entry.dto';
+import { MatchSideDto } from './match-side.dto';
 
 export class CreateMatchDto {
   @ValidateNested()
@@ -38,15 +29,6 @@ export class UpdateMatchDto {
   @IsOptional()
   @IsDateString()
   playedAt?: string;
-}
-
-export class LineupEntryDto {
-  @IsEnum(Slot)
-  slot!: Slot;
-
-  @IsInt()
-  @Min(1)
-  playerId!: number;
 }
 
 /** Replaces the whole lineup (and formation) of one side of a match. */
