@@ -4,6 +4,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { HealthController } from './health/health.controller';
+import { PlayersModule } from './players/players.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { TeamsModule } from './teams/teams.module';
 
@@ -14,6 +15,7 @@ import { TeamsModule } from './teams/teams.module';
     PrismaModule,
     AuthModule,
     TeamsModule,
+    PlayersModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: JwtAuthGuard }],
