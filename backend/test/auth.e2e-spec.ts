@@ -95,5 +95,8 @@ describe('Auth (e2e)', () => {
       await ctx.http().get('/auth/me').set('Authorization', 'Bearer garbage').expect(401);
     });
 
+    it('protects other routes too', async () => {
+      await ctx.http().get('/teams').expect(401);
+    });
   });
 });
