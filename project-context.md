@@ -437,6 +437,14 @@ Initial rules:
 - A tactic can be used with a team when the team can fill every slot of the formation with a player of the right role.
 - If the team is incompatible, the system explains the missing requirement.
 
+**Play rules** (checked by `POST /tactics/:id/validate`, i.e. before a tactic is simulated; drafts that break them can still be saved):
+- A team touches the ball at most 3 times in a row. Only `RECEIVE`, `SET` and `ATTACK` are touches; `MOVE` steps and ball steps are ignored.
+- A block is not a touch. It must directly follow an attack of the other team and starts a new possession (fresh touches for both teams).
+- The same player (slot) cannot touch the ball twice in a row.
+- After an attack the same team cannot touch the ball again (it is on the other side).
+- `RECEIVE` can only be the first touch of a team.
+- The libero cannot attack or block.
+
 Do not implement every rule immediately. Build the minimum necessary rules first and add only rules that support the acceptance criteria.
 
 ## Database delete behaviour

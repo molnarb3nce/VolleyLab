@@ -1,4 +1,4 @@
-import { StepInput, validateSteps } from './tactic-rules';
+import { StepInput, validatePlay, validateSteps } from './tactic-rules';
 
 const own = (overrides: Partial<StepInput> = {}): StepInput => ({
   actorSide: 'OWN',
@@ -68,3 +68,106 @@ describe('validateSteps', () => {
     expect(problems).toEqual(['Step 2: slot SETTER_2 does not exist in formation FIVE_ONE']);
   });
 });
+
+describe('validatePlay', () => {
+  const touch = (action: StepInput['action'], slot: StepInput['slot'], actorSide: StepInput['actorSide'] = 'OWN') =>
+    ({ actorSide, slot, action }) as StepInput;
+
+  it('accepts reception - set - attack followed by a block', () => {
+    const steps = [
+      touch('RECEIVE', 'LIBERO'),
+      touch('SET', 'SETTER_1'),
+      touch('ATTACK', 'MIDDLE_1'),
+      touch('BLOCK', 'MIDDLE_2', 'OPPONENT'),
+    ];
+    expect(validatePlay(steps)).toEqual([]);
+  });
+
+  it('ignores MOVE steps and the ball', () => {
+    const steps = [
+      touch('MOVE', 'SETTER_1'),
+      touch('RECEIVE', 'LIBERO'),
+      { actorSide: 'BALL', action: 'MOVE' } as StepInput,
+      touch('MOVE', 'MIDDLE_1'),
+      touch('SET', 'SETTER_1'),
+    ];
+    expect(validatePlay(steps)).toEqual([]);
+  });
+
+  it('rejects a fourth touch by the same team', () => {
+    const steps = [
+      touch('RECEIVE', 'LIBERO'),
+      touch('SET', 'SETTER_1'),
+      touch('SET', 'OUTSIDE_1'),
+      touch('SET', 'OUTSIDE_2'),
+    ];
+    expect(validatePlay(steps)).toEqual(['Step 4: a team may touch the ball at most 3 times in a row']);
+  });
+
+  it('resets the touch count when the other team touches the ball', () => {
+    const steps = [
+      touch('RECEIVE', 'LIBERO'),
+      touch('SET', 'SETTER_1'),
+      touch('SET', 'OUTSIDE_1'),
+      touch('RECEIVE', 'LIBERO', 'OPPONENT'),
+      touch('SET', 'SETTER_1', 'OPPONENT'),
+      touch('ATTACK', 'OUTSIDE_1', 'OPPONENT'),
+    ];
+    expect(validatePlay(steps)).toEqual([]);
+  });
+
+  it('does not count a block as a touch', () => {
+    const steps = [
+      touch('SET', 'SETTER_1'),
+      touch('ATTACK', 'OUTSIDE_1'),
+      touch('BLOCK', 'MIDDLE_1', 'OPPONENT'),
+      // after the block the attacking team has three fresh touches
+      touch('RECEIVE', 'LIBERO'),
+      touch('SET', 'SETTER_1'),
+      touch('ATTACK', 'OUTSIDE_2'),
+    ];
+    expect(validatePlay(steps)).toEqual([]);
+  });
+
+  it('rejects the same player touching twice in a row', () => {
+    const steps = [touch('RECEIVE', 'LIBERO'), touch('SET', 'LIBERO')];
+    expect(validatePlay(steps)).toEqual(['Step 2: the same player cannot touch the ball twice in a row']);
+  });
+
+  it('rejects a team touching the ball again after its attack', () => {
+    const steps = [touch('ATTACK', 'OUTSIDE_1'), touch('SET', 'SETTER_1')];
+    expect(validatePlay(steps)).toEqual([
+      'Step 2: after an attack the ball is on the other side, the same team cannot touch it again',
+    ]);
+  });
+
+  it('allows RECEIVE only as the first touch of a team', () => {
+    expect(validatePlay([touch('SET', 'SETTER_1'), touch('RECEIVE', 'LIBERO')])).toEqual([
+      'Step 2: RECEIVE must be the first touch of a team',
+    ]);
+  });
+
+  describe('block', () => {
+    it('must directly follow an attack of the other team', () => {
+      const msg = 'Step 1: a block must directly follow an attack of the other team';
+      expect(validatePlay([touch('BLOCK', 'MIDDLE_1', 'OPPONENT')])).toEqual([msg]);
+      expect(
+        validatePlay([touch('SET', 'SETTER_1'), touch('BLOCK', 'MIDDLE_1', 'OPPONENT')]),
+      ).toEqual(['Step 2: a block must directly follow an attack of the other team']);
+    });
+
+    it('cannot be made by the attacking team itself', () => {
+      expect(validatePlay([touch('ATTACK', 'OUTSIDE_1'), touch('BLOCK', 'MIDDLE_1')])).toEqual([
+        'Step 2: a block must directly follow an attack of the other team',
+      ]);
+    });
+  });
+
+  it('forbids the libero to attack or block', () => {
+    expect(validatePlay([touch('ATTACK', 'LIBERO')])).toEqual(['Step 1: the libero cannot attack or block']);
+    expect(
+      validatePlay([touch('ATTACK', 'OUTSIDE_1'), touch('BLOCK', 'LIBERO', 'OPPONENT')]),
+    ).toEqual(['Step 2: the libero cannot attack or block']);
+  });
+});
+

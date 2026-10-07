@@ -206,6 +206,27 @@ describe('Tactics (e2e)', () => {
       expect(res.body).toEqual({ valid: false, problems: ['Slot MIDDLE_2 is required but not assigned'] });
     });
 
+    it('rejects a sequence that breaks the volleyball rules, even with a compatible team', async () => {
+      const team = await createTeamWithRoster(ctx, alice, 'Mine');
+      const tactic = (await create({
+        name: 'Four touches',
+        formation: 'FIVE_ONE',
+        steps: [
+          step({ slot: 'LIBERO', action: 'RECEIVE' }),
+          step({ slot: 'SETTER_1', action: 'SET' }),
+          step({ slot: 'OUTSIDE_1', action: 'SET' }),
+          step({ slot: 'OUTSIDE_2', action: 'ATTACK' }),
+        ],
+      }).expect(201)).body; // drafts with rule violations can still be saved
+
+      const res = await validate(tactic.id, { teamId: team.id, assignments: assignments(team.players) }).expect(200);
+
+      expect(res.body).toEqual({
+        valid: false,
+        problems: ['Step 4: a team may touch the ball at most 3 times in a row'],
+      });
+    });
+
     it('explains role mismatches and players of another team', async () => {
       const tactic = await createValid();
       const team = await createTeamWithRoster(ctx, alice, 'Mine');

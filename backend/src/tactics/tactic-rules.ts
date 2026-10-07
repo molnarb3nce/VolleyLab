@@ -55,3 +55,59 @@ export function validateSteps(
 
   return problems;
 }
+
+/** A team may touch the ball at most three times in a row (a block does not count). */
+export const MAX_TEAM_TOUCHES = 3;
+
+/**
+ * Basic volleyball rules for the whole sequence, checked before a tactic is
+ * simulated; returns human-readable problems (empty = playable).
+ *
+ * Only RECEIVE, SET and ATTACK are touches. MOVE steps and ball steps are
+ * ignored. A BLOCK is not a team touch: it must directly follow an attack of
+ * the other team and starts a new possession (both teams get three fresh touches).
+ */
+export function validatePlay(steps: StepInput[]): string[] {
+  const problems: string[] = [];
+  let last: { side: ActorSide; slot?: Slot | null; action: TacticAction } | null = null;
+  let touches = 0; // touches of the team that touched the ball last
+
+  steps.forEach((step, index) => {
+    const label = `Step ${index + 1}`;
+    if (step.actorSide === 'BALL' || step.action === 'MOVE') return;
+
+    if (step.slot === 'LIBERO' && (step.action === 'ATTACK' || step.action === 'BLOCK')) {
+      problems.push(`${label}: the libero cannot attack or block`);
+    }
+
+    if (step.action === 'BLOCK') {
+      if (!last || last.action !== 'ATTACK' || last.side === step.actorSide) {
+        problems.push(`${label}: a block must directly follow an attack of the other team`);
+      }
+      last = null;
+      touches = 0;
+      return;
+    }
+
+    if (last && last.side !== step.actorSide) touches = 0; // the other team now has the ball
+    const firstTouch = touches === 0;
+    touches++;
+
+    if (step.action === 'RECEIVE' && !firstTouch) {
+      problems.push(`${label}: RECEIVE must be the first touch of a team`);
+    }
+    if (touches > MAX_TEAM_TOUCHES) {
+      problems.push(`${label}: a team may touch the ball at most ${MAX_TEAM_TOUCHES} times in a row`);
+    }
+    if (last && last.side === step.actorSide) {
+      if (last.action === 'ATTACK') {
+        problems.push(`${label}: after an attack the ball is on the other side, the same team cannot touch it again`);
+      } else if (last.slot === step.slot) {
+        problems.push(`${label}: the same player cannot touch the ball twice in a row`);
+      }
+    }
+    last = { side: step.actorSide, slot: step.slot, action: step.action };
+  });
+
+  return problems;
+}

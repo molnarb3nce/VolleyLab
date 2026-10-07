@@ -9,7 +9,7 @@ import {
   UpdateTacticDto,
   ValidateTacticDto,
 } from './dto/tactic.dto';
-import { validateSteps } from './tactic-rules';
+import { validatePlay, validateSteps } from './tactic-rules';
 
 const withSteps = { steps: { orderBy: { stepNumber: 'asc' } } } satisfies Prisma.TacticInclude;
 
@@ -82,7 +82,9 @@ export class TacticsService {
 
   /**
    * Checks whether a team (any user's team) can play the tactic with the given
-   * slot -> player assignment. Always answers 200; `problems` explains what is missing.
+   * slot -> player assignment, and whether the sequence of steps is playable
+   * (basic volleyball rules). Run this before simulating. Always answers 200;
+   * `problems` explains what is wrong.
    */
   async validate(userId: number, id: number, dto: ValidateTacticDto) {
     const tactic = await this.getOwnedTactic(userId, id);
@@ -95,6 +97,7 @@ export class TacticsService {
     if (tactic.steps.length === 0) {
       problems.push('The tactic has no steps');
     }
+    problems.push(...validatePlay(tactic.steps));
 
     const knownSlots = new Set<string>(Object.values(Slot));
     const entries: LineupEntry[] = [];
