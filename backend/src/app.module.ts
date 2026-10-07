@@ -9,6 +9,7 @@ import { MatchesModule } from './matches/matches.module';
 import { PlayersModule } from './players/players.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { StatisticsModule } from './statistics/statistics.module';
+import { TacticsModule } from './tactics/tactics.module';
 import { TeamsModule } from './teams/teams.module';
 
 @Module({
@@ -21,6 +22,7 @@ import { TeamsModule } from './teams/teams.module';
     PlayersModule,
     MatchesModule,
     StatisticsModule,
+    TacticsModule,
   ],
   controllers: [HealthController, FormationsController],
   providers: [{ provide: APP_GUARD, useClass: JwtAuthGuard }],
