@@ -3,7 +3,9 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
+import { FormationsController } from './formations/formations.controller';
 import { HealthController } from './health/health.controller';
+import { MatchesModule } from './matches/matches.module';
 import { PlayersModule } from './players/players.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { TeamsModule } from './teams/teams.module';
@@ -16,8 +18,10 @@ import { TeamsModule } from './teams/teams.module';
     AuthModule,
     TeamsModule,
     PlayersModule,
+    MatchesModule,
   ],
-  controllers: [HealthController],
+  controllers: [HealthController, FormationsController],
   providers: [{ provide: APP_GUARD, useClass: JwtAuthGuard }],
 })
 export class AppModule {}
+
