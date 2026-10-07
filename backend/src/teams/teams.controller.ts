@@ -5,13 +5,13 @@ import {
   Get,
   HttpCode,
   Param,
-  ParseIntPipe,
   Patch,
   Post,
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AuthUser, CurrentUser } from '../common/decorators/current-user.decorator';
+import { ParseIdPipe } from '../common/parse-id.pipe';
 import { CreateTeamDto, UpdateTeamDto } from './dto/team.dto';
 import { TeamsService } from './teams.service';
 
@@ -32,15 +32,16 @@ export class TeamsController {
     return this.teams.findAll(user.id, mine === 'true');
   }
 
+  @ApiQuery({ name: 'includeInactive', required: false, description: 'true = also list deactivated players' })
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.teams.findOne(id);
+  findOne(@Param('id', ParseIdPipe) id: number, @Query('includeInactive') includeInactive?: string) {
+    return this.teams.findOne(id, includeInactive === 'true');
   }
 
   @Patch(':id')
   update(
     @CurrentUser() user: AuthUser,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParseIdPipe) id: number,
     @Body() dto: UpdateTeamDto,
   ) {
     return this.teams.update(user.id, id, dto);
@@ -48,7 +49,7 @@ export class TeamsController {
 
   @Delete(':id')
   @HttpCode(204)
-  remove(@CurrentUser() user: AuthUser, @Param('id', ParseIntPipe) id: number) {
+  remove(@CurrentUser() user: AuthUser, @Param('id', ParseIdPipe) id: number) {
     return this.teams.remove(user.id, id);
   }
 }

@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Player } from '@prisma/client';
-import { isUniqueViolation } from '../common/prisma-errors';
+import { isForeignKeyViolation, isUniqueViolation } from '../common/prisma-errors';
 import { PrismaService } from '../prisma/prisma.service';
 import { TeamsService } from '../teams/teams.service';
 import { CreatePlayerDto, UpdatePlayerDto } from './dto/player.dto';
@@ -43,8 +43,17 @@ export class PlayersService {
       await this.prisma.player.update({ where: { id: playerId }, data: { isActive: false } });
       return { result: 'deactivated' };
     }
-    await this.prisma.player.delete({ where: { id: playerId } });
-    return { result: 'deleted' };
+    try {
+      await this.prisma.player.delete({ where: { id: playerId } });
+      return { result: 'deleted' };
+    } catch (error) {
+      // An event or lineup entry was added after the check above (Prisma P2003).
+      if (isForeignKeyViolation(error)) {
+        await this.prisma.player.update({ where: { id: playerId }, data: { isActive: false } });
+        return { result: 'deactivated' };
+      }
+      throw error;
+    }
   }
 
   private async getOwnedPlayer(userId: number, playerId: number): Promise<Player> {

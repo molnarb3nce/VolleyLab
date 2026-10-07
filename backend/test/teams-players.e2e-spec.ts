@@ -229,6 +229,28 @@ describe('Teams and players (e2e)', () => {
       expect(await ctx.prisma.player.count({ where: { id: created.id } })).toBe(1);
       const details = await ctx.http().get(`/teams/${team.id}`).set(bearer(alice)).expect(200);
       expect(details.body.players).toHaveLength(0);
+
+      const all = await ctx
+        .http()
+        .get(`/teams/${team.id}?includeInactive=true`)
+        .set(bearer(alice))
+        .expect(200);
+      expect(all.body.players).toHaveLength(1);
+      expect(all.body.players[0].isActive).toBe(false);
+
+      // ...and can be reactivated.
+      await ctx
+        .http()
+        .patch(`/players/${created.id}`)
+        .set(bearer(alice))
+        .send({ isActive: true })
+        .expect(200);
+    });
+
+    it('rejects ids that are not valid database ids', async () => {
+      await ctx.http().get('/teams/99999999999').set(bearer(alice)).expect(400);
+      await ctx.http().get('/teams/0').set(bearer(alice)).expect(400);
+      await ctx.http().get('/teams/abc').set(bearer(alice)).expect(400);
     });
 
     it("does not let another user delete a team's player", async () => {

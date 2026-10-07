@@ -28,11 +28,14 @@ export class TeamsService {
     });
   }
 
-  async findOne(id: number) {
+  async findOne(id: number, includeInactive = false) {
     const team = await this.prisma.team.findUnique({
       where: { id },
       include: {
-        players: { where: { isActive: true }, orderBy: { jerseyNumber: 'asc' } },
+        players: {
+          where: includeInactive ? {} : { isActive: true },
+          orderBy: { jerseyNumber: 'asc' },
+        },
       },
     });
     if (!team) {
