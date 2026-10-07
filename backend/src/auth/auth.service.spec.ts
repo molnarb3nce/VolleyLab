@@ -15,7 +15,6 @@ describe('AuthService', () => {
 
   describe('register', () => {
     it('stores a bcrypt hash, never the plain password, and returns a token', async () => {
-      prisma.user.findUnique.mockResolvedValue(null);
       prisma.user.create.mockImplementation(({ data }) => Promise.resolve({ id: 1, ...data }));
 
       const result = await service.register({ email: 'a@a.com', password: 'password123' });
@@ -27,17 +26,7 @@ describe('AuthService', () => {
       expect(jwt.sign).toHaveBeenCalledWith({ sub: 1, email: 'a@a.com' });
     });
 
-    it('rejects an email that is already registered', async () => {
-      prisma.user.findUnique.mockResolvedValue({ id: 1, email: 'a@a.com' });
-
-      await expect(
-        service.register({ email: 'a@a.com', password: 'password123' }),
-      ).rejects.toBeInstanceOf(ConflictException);
-      expect(prisma.user.create).not.toHaveBeenCalled();
-    });
-
-    it('turns a unique-constraint race into a conflict', async () => {
-      prisma.user.findUnique.mockResolvedValue(null);
+    it('turns a duplicate email into a conflict', async () => {
       prisma.user.create.mockRejectedValue(
         new Prisma.PrismaClientKnownRequestError('duplicate', {
           code: 'P2002',
@@ -83,3 +72,4 @@ describe('AuthService', () => {
     });
   });
 });
+

@@ -1,6 +1,5 @@
 import { PartialType } from '@nestjs/swagger';
 import { PlayerRole } from '@prisma/client';
-import { Transform } from 'class-transformer';
 import {
   IsBoolean,
   IsEnum,
@@ -12,10 +11,10 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
-import { trim } from '../../common/transforms';
+import { Trim } from '../../common/transforms';
 
 export class CreatePlayerDto {
-  @Transform(trim)
+  @Trim()
   @IsString()
   @IsNotEmpty({ message: 'name must not be empty' })
   @MaxLength(100)
@@ -35,3 +34,4 @@ export class UpdatePlayerDto extends PartialType(CreatePlayerDto) {
   @IsBoolean()
   isActive?: boolean;
 }
+

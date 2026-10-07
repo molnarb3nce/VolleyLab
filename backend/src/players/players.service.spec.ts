@@ -16,6 +16,9 @@ describe('PlayersService', () => {
   const teams = { getOwnedTeam: jest.fn() };
   let service: PlayersService;
 
+  const uniqueViolation = () =>
+    new Prisma.PrismaClientKnownRequestError('duplicate', { code: 'P2002', clientVersion: 'test' });
+
   const dto = { name: 'Bence', jerseyNumber: 7, role: 'SETTER' as const };
 
   beforeEach(() => {
@@ -26,7 +29,6 @@ describe('PlayersService', () => {
   describe('create', () => {
     it('creates a player in a team owned by the user', async () => {
       teams.getOwnedTeam.mockResolvedValue({ id: 1, ownerId: 5 });
-      prisma.player.findUnique.mockResolvedValue(null);
       prisma.player.create.mockResolvedValue({ id: 10 });
 
       await service.create(5, 1, dto);
@@ -44,23 +46,9 @@ describe('PlayersService', () => {
       expect(prisma.player.create).not.toHaveBeenCalled();
     });
 
-    it('rejects a duplicate jersey number within the team', async () => {
+    it('turns a duplicate jersey number into a conflict', async () => {
       teams.getOwnedTeam.mockResolvedValue({ id: 1, ownerId: 5 });
-      prisma.player.findUnique.mockResolvedValue({ id: 3, jerseyNumber: 7 });
-
-      await expect(service.create(5, 1, dto)).rejects.toBeInstanceOf(ConflictException);
-      expect(prisma.player.create).not.toHaveBeenCalled();
-    });
-
-    it('turns a unique-constraint race into a conflict', async () => {
-      teams.getOwnedTeam.mockResolvedValue({ id: 1, ownerId: 5 });
-      prisma.player.findUnique.mockResolvedValue(null);
-      prisma.player.create.mockRejectedValue(
-        new Prisma.PrismaClientKnownRequestError('duplicate', {
-          code: 'P2002',
-          clientVersion: 'test',
-        }),
-      );
+      prisma.player.create.mockRejectedValue(uniqueViolation());
 
       await expect(service.create(5, 1, dto)).rejects.toBeInstanceOf(ConflictException);
     });
@@ -84,24 +72,13 @@ describe('PlayersService', () => {
       expect(prisma.player.update).not.toHaveBeenCalled();
     });
 
-    it('rejects changing to a jersey number already used in the team', async () => {
-      prisma.player.findUnique
-        .mockResolvedValueOnce(existing) // the player itself
-        .mockResolvedValueOnce({ id: 11, jerseyNumber: 9 }); // clash lookup
+    it('turns a duplicate jersey number into a conflict', async () => {
+      prisma.player.findUnique.mockResolvedValue(existing);
+      prisma.player.update.mockRejectedValue(uniqueViolation());
 
       await expect(service.update(5, 10, { jerseyNumber: 9 })).rejects.toBeInstanceOf(
         ConflictException,
       );
-    });
-
-    it('does not run the clash check when the jersey number is unchanged', async () => {
-      prisma.player.findUnique.mockResolvedValueOnce(existing);
-      prisma.player.update.mockResolvedValue(existing);
-
-      await service.update(5, 10, { jerseyNumber: 7, name: 'Renamed' });
-
-      expect(prisma.player.findUnique).toHaveBeenCalledTimes(1);
-      expect(prisma.player.update).toHaveBeenCalled();
     });
   });
 
@@ -146,3 +123,4 @@ describe('PlayersService', () => {
     });
   });
 });
+

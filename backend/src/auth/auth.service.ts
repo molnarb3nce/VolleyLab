@@ -1,7 +1,7 @@
 import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
+import { isUniqueViolation } from '../common/prisma-errors';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
 
@@ -20,20 +20,12 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthResult> {
-    const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
-    if (existing) {
-      throw new ConflictException('A user with this email already exists');
-    }
-
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
     try {
-      const user = await this.prisma.user.create({
-        data: { email: dto.email, passwordHash },
-      });
+      const user = await this.prisma.user.create({ data: { email: dto.email, passwordHash } });
       return this.buildResult(user);
     } catch (error) {
-      // Two simultaneous registrations can both pass the check above.
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      if (isUniqueViolation(error)) {
         throw new ConflictException('A user with this email already exists');
       }
       throw error;
