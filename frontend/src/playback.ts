@@ -1,34 +1,38 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Point, startPositions, tokenKey } from './court';
-import { Formation, FormationsInfo, TacticStep } from './types';
+import { CourtSetup, Point, startingPositions, tokenKey } from './court';
+import { TacticStep } from './types';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const TOUCH = new Set(['RECEIVE', 'SET', 'ATTACK', 'BLOCK']);
+
+/** After an attack the ball continues to the other side of the net (unless a block follows). */
+function overNet(from: Point): Point {
+  return from.y >= 9 ? { x: from.x, y: 6 } : { x: from.x, y: 12 };
+}
+
 /**
- * Replays the steps one after another: each step moves its token to (x, y)
- * over `duration` ms (CSS transition on the court tokens). Deterministic, no physics.
+ * Replays a play from the saved base positions.
+ *
+ * Contact steps (receive / set / attack / block) move the player from their
+ * current spot (base, until they have acted) to the step position, and at the
+ * same time fly the ball there. `delay` is tempo: the player waits that many
+ * ms, then runs so they arrive when the ball does. After an attack the ball
+ * continues across the net, unless the next step is a block.
  */
-export function usePlayback(
-  info: FormationsInfo | undefined,
-  own: Formation,
-  opponent: Formation,
-  steps: TacticStep[],
-) {
-  const initial = useCallback(
-    () => (info ? startPositions(info, own, opponent) : {}),
-    [info, own, opponent],
-  );
+export function usePlayback(setup: CourtSetup, steps: TacticStep[], base: Record<string, Point> = {}) {
+  const initial = useCallback(() => startingPositions(setup, base), [setup, base]);
   const [positions, setPositions] = useState<Record<string, Point>>(initial);
+  const [transitions, setTransitions] = useState<Record<string, number>>({});
   const [activeStep, setActiveStep] = useState<number | null>(null);
-  const [transitionMs, setTransitionMs] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const runId = useRef(0); // lets a newer run / reset cancel the running one
+  const runId = useRef(0);
 
   const reset = useCallback(() => {
     runId.current++;
     setPlaying(false);
     setActiveStep(null);
-    setTransitionMs(0);
+    setTransitions({});
     setPositions(initial());
   }, [initial]);
 
@@ -36,23 +40,57 @@ export function usePlayback(
 
   const play = async () => {
     const id = ++runId.current;
+    const still = () => runId.current === id;
     setPositions(initial());
-    setTransitionMs(0);
+    setTransitions({});
+    setActiveStep(null);
     setPlaying(true);
-    await sleep(100); // let the court jump back to the start positions first
+    await sleep(80);
+    if (!still()) return;
 
     for (const [index, step] of steps.entries()) {
-      if (runId.current !== id) return;
+      if (!still()) return;
       setActiveStep(index);
-      setTransitionMs(step.duration);
-      setPositions((p) => ({ ...p, [tokenKey(step.actorSide, step.slot)]: { x: step.x, y: step.y } }));
-      await sleep(step.duration + 150);
+      const dest = { x: step.x, y: step.y };
+      const duration = step.duration;
+      const delay = Math.min(step.delay ?? 0, duration);
+      const actor = tokenKey(step.actorSide, step.slot);
+      const next = steps[index + 1];
+      const isTouch = step.actorSide !== 'BALL' && TOUCH.has(step.action);
+      const playerMs = Math.max(0, duration - delay);
+
+      if (step.actorSide === 'BALL') {
+        setTransitions({ BALL: duration });
+        setPositions((p) => ({ ...p, BALL: dest }));
+        await sleep(duration + 80);
+        continue;
+      }
+
+      const trans: Record<string, number> = { [actor]: playerMs };
+      if (isTouch) trans.BALL = duration;
+      setTransitions(trans);
+
+      if (isTouch) setPositions((p) => ({ ...p, BALL: dest }));
+      if (delay > 0) {
+        await sleep(delay);
+        if (!still()) return;
+      }
+      setPositions((p) => ({ ...p, [actor]: dest }));
+      await sleep(playerMs + 80);
+      if (!still()) return;
+
+      if (step.action === 'ATTACK' && next?.action !== 'BLOCK' && next?.actorSide !== 'BALL') {
+        setTransitions({ BALL: 700 });
+        setPositions((p) => ({ ...p, BALL: overNet(dest) }));
+        await sleep(780);
+      }
     }
-    if (runId.current === id) {
+
+    if (still()) {
       setPlaying(false);
       setActiveStep(null);
     }
   };
 
-  return { positions, activeStep, transitionMs, playing, play, reset };
+  return { positions, transitions, activeStep, playing, play, reset };
 }

@@ -1,5 +1,5 @@
 import { PartialType, OmitType } from '@nestjs/swagger';
-import { Formation } from '@prisma/client';
+import { Formation, Slot } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
@@ -10,6 +10,7 @@ import {
   IsObject,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
   Min,
   ValidateNested,
@@ -37,6 +38,28 @@ export class CreateTacticDto {
   @IsOptional()
   @IsEnum(Formation)
   opponentFormation?: Formation;
+
+  /** Starting positions keyed `OWN:LIBERO`, `BALL`, … Missing slots use the defaults. */
+  @IsOptional()
+  @IsObject()
+  basePositions?: Record<string, { x: number; y: number }>;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(6)
+  rotation?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(6)
+  opponentRotation?: number;
+
+  /** Back-row slot replaced by the libero; omit or null for no libero on court. */
+  @IsOptional()
+  @IsEnum(Slot)
+  liberoReplaces?: Slot | null;
 
   /** Optional initial steps; they are numbered by their position. */
   @IsOptional()

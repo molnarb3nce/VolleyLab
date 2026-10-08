@@ -99,6 +99,14 @@ export interface TacticStep {
   x: number;
   y: number;
   duration: number;
+  /** Tempo: ms the player waits before running. The ball flies for `duration`. */
+  delay: number;
+}
+
+export interface TacticStepFromApi extends TacticStep {
+  id?: number;
+  tacticId?: number;
+  stepNumber?: number;
 }
 
 export interface Tactic {
@@ -107,7 +115,13 @@ export interface Tactic {
   description: string | null;
   formation: Formation;
   opponentFormation: Formation;
-  steps: TacticStep[];
+  rotation: number;
+  opponentRotation: number;
+  /** Back-row slot the libero replaces; null if libero is not used on court. */
+  liberoReplaces: Slot | null;
+  /** Starting positions keyed `OWN:LIBERO`, `BALL`, … Missing slots use the defaults. */
+  basePositions: Record<string, { x: number; y: number }>;
+  steps: TacticStepFromApi[];
   _count?: { steps: number };
 }
 

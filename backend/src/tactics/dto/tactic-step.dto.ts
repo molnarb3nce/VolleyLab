@@ -29,9 +29,16 @@ export class TacticStepDto {
   @Max(COURT.height)
   y!: number;
 
-  /** Animation duration in milliseconds. */
+  /** Animation duration in milliseconds (ball flight time for contact actions). */
   @IsInt()
   @Min(0)
   @Max(MAX_STEP_DURATION_MS)
   duration!: number;
+
+  /** Tempo: ms to wait before the player starts moving. The ball flies for the whole duration. */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(MAX_STEP_DURATION_MS)
+  delay?: number;
 }

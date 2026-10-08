@@ -249,6 +249,13 @@ model Tactic {
   description       String?
   formation         Formation
   opponentFormation Formation
+  /// Starting position of every token, e.g. {"OWN:LIBERO": {"x": 3, "y": 17}}; missing slots use the defaults.
+  basePositions     Json      @default("{}")
+  /// Rotational position 1..6 (zone 1 = back right, setter in zone 1 at rotation 1).
+  rotation          Int       @default(1)
+  opponentRotation  Int       @default(1)
+  /// Back-row slot replaced by the libero while that slot is in the back row; null = libero off court.
+  liberoReplaces    Slot?
   createdAt         DateTime  @default(now())
 
   owner User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
@@ -272,6 +279,8 @@ model TacticStep {
   y          Float
   /// Animation duration in milliseconds.
   duration   Int
+  /// Tempo: ms after the step starts before the actor starts moving (the ball flies for the whole duration).
+  delay      Int          @default(0)
 
   tactic Tactic @relation(fields: [tacticId], references: [id], onDelete: Cascade)
 

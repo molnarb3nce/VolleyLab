@@ -59,6 +59,43 @@ describe('Tactics (e2e)', () => {
       expect(tactic.steps[4]).toMatchObject({ actorSide: 'BALL', slot: null });
     });
 
+    it('stores base positions and the tempo delay of a step', async () => {
+      const tactic = (
+        await create({
+          name: 'x',
+          formation: 'FIVE_ONE',
+          basePositions: { 'OWN:LIBERO': { x: 2, y: 16 }, BALL: { x: 4.5, y: 7 } },
+          steps: [step({ slot: 'LIBERO', action: 'RECEIVE', delay: 200 })],
+        }).expect(201)
+      ).body;
+
+      expect(tactic.basePositions).toEqual({ 'OWN:LIBERO': { x: 2, y: 16 }, BALL: { x: 4.5, y: 7 } });
+      expect(tactic.steps[0].delay).toBe(200);
+
+      const patched = (
+        await ctx
+          .http()
+          .patch(`/tactics/${tactic.id}`)
+          .set(bearer(alice))
+          .send({ basePositions: { BALL: { x: 4.5, y: 8 } } })
+          .expect(200)
+      ).body;
+      expect(patched.basePositions).toEqual({ BALL: { x: 4.5, y: 8 } });
+    });
+
+    it('rejects unknown or out-of-court base positions', async () => {
+      await create({
+        name: 'x',
+        formation: 'FIVE_ONE',
+        basePositions: { FOO: { x: 1, y: 1 } },
+      }).expect(400);
+      await create({
+        name: 'x',
+        formation: 'FIVE_ONE',
+        basePositions: { 'OWN:LIBERO': { x: 99, y: 1 } },
+      }).expect(400);
+    });
+
     it('can be saved as a draft without steps', async () => {
       const tactic = (await create({ name: 'Draft', formation: 'SIX_TWO', opponentFormation: 'FIVE_ONE' }).expect(201)).body;
       expect(tactic.steps).toEqual([]);

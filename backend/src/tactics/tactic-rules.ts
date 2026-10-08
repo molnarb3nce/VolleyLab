@@ -6,6 +6,43 @@ export const COURT = { width: 9, height: 18 } as const;
 export const MAX_STEP_DURATION_MS = 10_000;
 export const MAX_STEPS = 200;
 
+const SLOTS = new Set<string>(Object.values(Slot));
+
+/**
+ * Starting positions keyed like the frontend tokens: `BALL`, `OWN:LIBERO`,
+ * `OPPONENT:MIDDLE_1`. Missing keys fall back to the formation defaults.
+ */
+export function validateBasePositions(value: unknown): string[] {
+  if (value == null) return [];
+  if (typeof value !== 'object' || Array.isArray(value)) {
+    return ['basePositions must be an object of token keys to {x, y}'];
+  }
+
+  const problems: string[] = [];
+  for (const [key, point] of Object.entries(value as Record<string, unknown>)) {
+    if (key !== 'BALL') {
+      const [side, slot, extra] = key.split(':');
+      if (extra || (side !== 'OWN' && side !== 'OPPONENT') || !slot || !SLOTS.has(slot)) {
+        problems.push(`Unknown position key ${key}`);
+        continue;
+      }
+    }
+    if (!point || typeof point !== 'object' || Array.isArray(point)) {
+      problems.push(`${key}: expected {x, y}`);
+      continue;
+    }
+    const { x, y, ...rest } = point as Record<string, unknown>;
+    if (Object.keys(rest).length > 0) problems.push(`${key}: unknown properties`);
+    if (typeof x !== 'number' || x < 0 || x > COURT.width) {
+      problems.push(`${key}: x must be between 0 and ${COURT.width}`);
+    }
+    if (typeof y !== 'number' || y < 0 || y > COURT.height) {
+      problems.push(`${key}: y must be between 0 and ${COURT.height}`);
+    }
+  }
+  return problems;
+}
+
 export interface StepInput {
   actorSide: ActorSide;
   slot?: Slot | null;

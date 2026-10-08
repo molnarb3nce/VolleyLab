@@ -1,39 +1,45 @@
-import { ActorSide, Formation, FormationsInfo, Slot } from './types';
-import { slotsOf } from './lineup';
+import { ActorSide, Formation, Slot } from './types';
+import { layoutSide } from './rotation';
 
 export interface Point {
   x: number;
   y: number;
 }
 
-/** Default start position of each slot for the team in the lower half (y 9..18); the net is at y = 9. */
-const OWN_START: Record<Slot, Point> = {
-  OUTSIDE_1: { x: 1.5, y: 11.5 },
-  MIDDLE_1: { x: 4.5, y: 11.5 },
-  OPPOSITE: { x: 7.5, y: 11.5 },
-  SETTER_2: { x: 7.5, y: 11.5 },
-  OUTSIDE_2: { x: 1.5, y: 15 },
-  MIDDLE_2: { x: 4.5, y: 15 },
-  SETTER_1: { x: 7.5, y: 15 },
-  LIBERO: { x: 3, y: 17.5 },
-};
-
 /** The opponent stands in the upper half, mirrored. */
 export const mirror = (p: Point): Point => ({ x: 9 - p.x, y: 18 - p.y });
 
-export const BALL_START: Point = { x: 4.5, y: 9 };
+/** Just on the opponent side of the net, so a receive starts with the ball coming through. */
+export const BALL_START: Point = { x: 4.5, y: 7 };
 
 /** Key of a token on the court: the ball, or a slot of one side. */
 export const tokenKey = (side: ActorSide, slot: Slot | null): string =>
   side === 'BALL' ? 'BALL' : `${side}:${slot}`;
 
-export function startPositions(
-  info: FormationsInfo,
-  own: Formation,
-  opponent: Formation,
-): Record<string, Point> {
-  const positions: Record<string, Point> = { BALL: BALL_START };
-  for (const slot of slotsOf(info, own)) positions[tokenKey('OWN', slot)] = OWN_START[slot];
-  for (const slot of slotsOf(info, opponent)) positions[tokenKey('OPPONENT', slot)] = mirror(OWN_START[slot]);
-  return positions;
+export interface CourtSetup {
+  ownFormation: Formation;
+  opponentFormation: Formation;
+  rotation: number;
+  opponentRotation: number;
+  /** Back-row slot replaced by the libero while that slot is in the back row; null = no libero on court. */
+  liberoReplaces: Slot | null;
+}
+
+/** Default layout: six per side from rotation, optional libero substitution on own side. */
+export function startPositions(setup: CourtSetup): Record<string, Point> {
+  return {
+    BALL: BALL_START,
+    ...layoutSide('OWN', setup.ownFormation, setup.rotation, setup.liberoReplaces, mirror),
+    ...layoutSide('OPPONENT', setup.opponentFormation, setup.opponentRotation, null, mirror),
+  };
+}
+
+/** Rotation defaults overlaid with saved base positions (only keys still on court are drawn). */
+export function startingPositions(setup: CourtSetup, base: Record<string, Point> = {}): Record<string, Point> {
+  const defaults = startPositions(setup);
+  const merged = { ...defaults };
+  for (const [key, point] of Object.entries(base)) {
+    if (key in defaults || key === 'BALL') merged[key] = point;
+  }
+  return merged;
 }

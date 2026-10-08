@@ -9,7 +9,7 @@ import {
   ValidateTacticDto,
 } from './dto/tactic.dto';
 import { TacticStepDto } from './dto/tactic-step.dto';
-import { validatePlay, validateSteps } from './tactic-rules';
+import { validateBasePositions, validatePlay, validateSteps } from './tactic-rules';
 
 const withSteps = { steps: { orderBy: { stepNumber: 'asc' } } } satisfies Prisma.TacticInclude;
 
@@ -22,6 +22,7 @@ export class TacticsService {
     const opponentFormation = dto.opponentFormation ?? dto.formation;
     const steps = dto.steps ?? [];
     this.assertValidSteps(dto.formation, opponentFormation, steps);
+    this.assertValidBase(dto.basePositions);
 
     return this.prisma.tactic.create({
       data: {
@@ -30,6 +31,10 @@ export class TacticsService {
         description: dto.description,
         formation: dto.formation,
         opponentFormation,
+        basePositions: (dto.basePositions ?? {}) as Prisma.InputJsonValue,
+        rotation: dto.rotation ?? 1,
+        opponentRotation: dto.opponentRotation ?? 1,
+        liberoReplaces: dto.liberoReplaces ?? null,
         steps: { create: toStepRows(steps) },
       },
       include: withSteps,
@@ -54,10 +59,22 @@ export class TacticsService {
     const formation = dto.formation ?? tactic.formation;
     const opponentFormation = dto.opponentFormation ?? tactic.opponentFormation;
     this.assertValidSteps(formation, opponentFormation, tactic.steps);
+    this.assertValidBase(dto.basePositions);
 
     return this.prisma.tactic.update({
       where: { id },
-      data: { name: dto.name, description: dto.description, formation, opponentFormation },
+      data: {
+        name: dto.name,
+        description: dto.description,
+        formation,
+        opponentFormation,
+        ...(dto.basePositions !== undefined
+          ? { basePositions: dto.basePositions as Prisma.InputJsonValue }
+          : {}),
+        ...(dto.rotation !== undefined ? { rotation: dto.rotation } : {}),
+        ...(dto.opponentRotation !== undefined ? { opponentRotation: dto.opponentRotation } : {}),
+        ...(dto.liberoReplaces !== undefined ? { liberoReplaces: dto.liberoReplaces } : {}),
+      },
       include: withSteps,
     });
   }
@@ -131,6 +148,13 @@ export class TacticsService {
     }
   }
 
+  private assertValidBase(positions: unknown): void {
+    const problems = validateBasePositions(positions);
+    if (problems.length > 0) {
+      throw new BadRequestException(problems);
+    }
+  }
+
   private async getOwnedTactic(userId: number, id: number) {
     const tactic = await this.prisma.tactic.findUnique({ where: { id }, include: withSteps });
     if (!tactic || tactic.ownerId !== userId) {
@@ -151,6 +175,7 @@ function toStepRows(steps: TacticStepDto[]) {
     x: s.x,
     y: s.y,
     duration: s.duration,
+    delay: s.delay ?? 0,
   }));
 }
 

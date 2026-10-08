@@ -1,4 +1,4 @@
-import { StepInput, validatePlay, validateSteps } from './tactic-rules';
+import { StepInput, validateBasePositions, validatePlay, validateSteps } from './tactic-rules';
 
 const own = (overrides: Partial<StepInput> = {}): StepInput => ({
   actorSide: 'OWN',
@@ -66,6 +66,30 @@ describe('validateSteps', () => {
   it('reports problems with the number of the offending step', () => {
     const problems = validateSteps('FIVE_ONE', 'FIVE_ONE', [own(), own({ slot: 'SETTER_2' }), own()]);
     expect(problems).toEqual(['Step 2: slot SETTER_2 does not exist in formation FIVE_ONE']);
+  });
+});
+
+describe('validateBasePositions', () => {
+  it('accepts an empty object and omitted values', () => {
+    expect(validateBasePositions({})).toEqual([]);
+    expect(validateBasePositions(undefined)).toEqual([]);
+  });
+
+  it('accepts known token keys on the court', () => {
+    expect(
+      validateBasePositions({
+        BALL: { x: 4.5, y: 7 },
+        'OWN:LIBERO': { x: 2, y: 16 },
+        'OPPONENT:MIDDLE_1': { x: 4.5, y: 3 },
+      }),
+    ).toEqual([]);
+  });
+
+  it('rejects unknown keys and out-of-court coordinates', () => {
+    expect(validateBasePositions({ FOO: { x: 1, y: 1 } })).toEqual(['Unknown position key FOO']);
+    expect(validateBasePositions({ 'OWN:LIBERO': { x: 99, y: 1 } })).toEqual([
+      'OWN:LIBERO: x must be between 0 and 9',
+    ]);
   });
 });
 
