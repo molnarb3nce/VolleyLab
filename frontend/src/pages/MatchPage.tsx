@@ -2,6 +2,7 @@ import { Button, Chip, Stack, Typography } from '@mui/material';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../api';
+import { gradientBrandText } from '../glass';
 import { LineupEditor } from '../components/LineupEditor';
 import { LiveRecorder } from '../components/LiveRecorder';
 import { SetsPanel } from '../components/SetsPanel';
@@ -32,7 +33,7 @@ export function MatchPage() {
   return (
     <Stack spacing={3}>
       <Stack direction="row" alignItems="center" spacing={2}>
-        <Typography variant="h4">{home?.team.name} vs {away?.team.name}</Typography>
+        <Typography variant="h4" sx={gradientBrandText}>{home?.team.name} vs {away?.team.name}</Typography>
         <Chip label={match.status} color={match.status === 'IN_PROGRESS' ? 'success' : 'default'} />
         {match.status === 'PLANNED' && <Button variant="contained" onClick={() => setStatus('IN_PROGRESS')}>Start match</Button>}
         {match.status === 'IN_PROGRESS' && (

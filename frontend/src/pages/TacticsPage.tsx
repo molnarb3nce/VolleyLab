@@ -14,6 +14,7 @@ import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { FORMATION_LABEL, FORMATIONS } from '../constants';
+import { gradientBrandText } from '../glass';
 import { ErrorAlert, useAction, useLoad } from '../hooks';
 import { Formation, Tactic } from '../types';
 
@@ -55,7 +56,7 @@ export function TacticsPage() {
   return (
     <Stack spacing={2.5}>
       <Box>
-        <Typography variant="h4" gutterBottom>
+        <Typography variant="h4" gutterBottom sx={gradientBrandText}>
           Tactics
         </Typography>
         <Typography color="text.secondary">
@@ -93,8 +94,11 @@ export function TacticsPage() {
           <Paper
             key={t.id}
             sx={{
-              transition: 'box-shadow 0.15s ease',
-              '&:hover': { boxShadow: '0 4px 20px rgba(15,23,42,0.08)' },
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+              '&:hover': {
+                transform: 'translateY(-1px)',
+                boxShadow: '0 16px 48px rgba(0,0,0,0.45), 0 0 0 1px rgba(129,140,248,0.2)',
+              },
             }}
           >
             <Stack direction="row" alignItems="center" sx={{ px: 1, py: 0.5 }}>

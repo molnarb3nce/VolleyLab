@@ -16,6 +16,7 @@ import {
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
+import { gradientBrandText } from '../glass';
 import { FORMATION_LABEL, FORMATIONS } from '../constants';
 import { ErrorAlert, useAction, useLoad } from '../hooks';
 import { Formation, Match, Team } from '../types';
@@ -50,7 +51,7 @@ export function MatchesPage() {
 
   return (
     <>
-      <Typography variant="h4" gutterBottom>Matches</Typography>
+      <Typography variant="h4" gutterBottom sx={gradientBrandText}>Matches</Typography>
       <ErrorAlert error={loadError || error} />
       <Paper sx={{ p: 2, my: 2 }}>
         <Typography variant="h6" gutterBottom>New match</Typography>

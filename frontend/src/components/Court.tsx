@@ -1,4 +1,4 @@
-import { MouseEvent, PointerEvent, useRef } from 'react';
+import { MouseEvent, PointerEvent, useId, useRef } from 'react';
 import { COURT, SLOT_SHORT } from '../constants';
 import { Point } from '../court';
 
@@ -42,6 +42,7 @@ export function Court({
   onPick,
   onDragToken,
 }: Props) {
+  const floorId = useId().replace(/:/g, '');
   const svg = useRef<SVGSVGElement>(null);
   const drag = useRef<{ key: string; moved: boolean } | null>(null);
   const skipClick = useRef(false);
@@ -92,8 +93,9 @@ export function Court({
         width: '100%',
         maxWidth: 440,
         display: 'block',
-        borderRadius: 12,
-        boxShadow: '0 4px 24px rgba(15, 23, 42, 0.12)',
+        borderRadius: 16,
+        boxShadow:
+          '0 0 0 1px rgba(255,255,255,0.12), 0 12px 40px rgba(0,0,0,0.55), 0 0 60px rgba(99,102,241,0.15)',
         cursor: onPick ? 'crosshair' : 'default',
         touchAction: 'none',
         userSelect: 'none',
@@ -101,20 +103,21 @@ export function Court({
       onClick={onCourtClick}
     >
       <defs>
-        <linearGradient id="courtFloor" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#e8c896" />
+        <linearGradient id={floorId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#edd5a8" />
+          <stop offset="50%" stopColor="#e8c896" />
           <stop offset="100%" stopColor="#d4a574" />
         </linearGradient>
       </defs>
-      <rect x={0} y={0} width={COURT.width} height={COURT.height} fill="url(#courtFloor)" rx={0.15} />
+      <rect x={0} y={0} width={COURT.width} height={COURT.height} fill={`url(#${floorId})`} rx={0.15} />
       <rect x={0} y={0} width={COURT.width} height={COURT.height} fill="none" stroke="#fff" strokeWidth={0.12} rx={0.15} />
-      <line x1={0} y1={6} x2={COURT.width} y2={6} stroke="#fff" strokeWidth={0.08} opacity={0.85} />
-      <line x1={0} y1={12} x2={COURT.width} y2={12} stroke="#fff" strokeWidth={0.08} opacity={0.85} />
-      <line x1={-0.5} y1={9} x2={COURT.width + 0.5} y2={9} stroke="#1e293b" strokeWidth={0.18} />
-      <text x={COURT.width / 2} y={8.55} textAnchor="middle" fontSize={0.35} fill="#64748b" style={{ pointerEvents: 'none' }}>
+      <line x1={0} y1={6} x2={COURT.width} y2={6} stroke="#fff" strokeWidth={0.08} opacity={0.9} />
+      <line x1={0} y1={12} x2={COURT.width} y2={12} stroke="#fff" strokeWidth={0.08} opacity={0.9} />
+      <line x1={-0.5} y1={9} x2={COURT.width + 0.5} y2={9} stroke="#334155" strokeWidth={0.16} />
+      <text x={COURT.width / 2} y={8.55} textAnchor="middle" fontSize={0.35} fill="#78716c" style={{ pointerEvents: 'none' }}>
         our side
       </text>
-      <text x={COURT.width / 2} y={9.45} textAnchor="middle" fontSize={0.35} fill="#64748b" style={{ pointerEvents: 'none' }}>
+      <text x={COURT.width / 2} y={9.45} textAnchor="middle" fontSize={0.35} fill="#78716c" style={{ pointerEvents: 'none' }}>
         opponent
       </text>
 
@@ -125,7 +128,7 @@ export function Court({
           cy={g.y}
           r={0.55}
           fill="none"
-          stroke="#555"
+          stroke="#57534e"
           strokeWidth={0.08}
           strokeDasharray="0.2 0.15"
           opacity={0.7}
@@ -134,7 +137,7 @@ export function Court({
 
       {markers.map((m, i) => (
         <g key={i} opacity={m.active ? 1 : 0.45}>
-          <circle cx={m.x} cy={m.y} r={m.active ? 0.38 : 0.28} fill={m.active ? '#c62828' : '#94a3b8'} />
+          <circle cx={m.x} cy={m.y} r={m.active ? 0.38 : 0.28} fill={m.active ? '#f472b6' : '#64748b'} />
           <text
             x={m.x}
             y={m.y + 0.16}
@@ -162,7 +165,7 @@ export function Court({
           onPointerUp={onTokenUp}
           onPointerCancel={onTokenUp}
         >
-          {t.highlight && <circle r={0.92} fill="none" stroke="#f59e0b" strokeWidth={0.12} opacity={0.95} />}
+          {t.highlight && <circle r={0.92} fill="none" stroke="#fcd34d" strokeWidth={0.12} opacity={0.95} />}
           <circle
             r={t.key === 'BALL' ? 0.38 : 0.68}
             fill={t.color}
@@ -186,8 +189,8 @@ export function toTokens(
 ): Token[] {
   return Object.entries(positions).map(([key, p]) => {
     const extra = extras[key] ?? {};
-    if (key === 'BALL') return { key, ...p, label: '', color: '#222', ...extra };
+    if (key === 'BALL') return { key, ...p, label: '', color: '#f8fafc', ...extra };
     const [side, slot] = key.split(':');
-    return { key, ...p, label: SLOT_SHORT[slot] ?? slot, color: side === 'OWN' ? '#1976d2' : '#c62828', ...extra };
+    return { key, ...p, label: SLOT_SHORT[slot] ?? slot, color: side === 'OWN' ? '#60a5fa' : '#f87171', ...extra };
   });
 }

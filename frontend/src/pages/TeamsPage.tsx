@@ -16,6 +16,7 @@ import {
 import { FormEvent, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
+import { gradientBrandText } from '../glass';
 import { useAuth } from '../auth';
 import { ErrorAlert, useAction, useLoad } from '../hooks';
 import { Team } from '../types';
@@ -41,7 +42,7 @@ export function TeamsPage() {
 
   return (
     <>
-      <Typography variant="h4" gutterBottom>Teams</Typography>
+      <Typography variant="h4" gutterBottom sx={gradientBrandText}>Teams</Typography>
       <Typography color="text.secondary" gutterBottom>
         Every team can be used in matches and tactics, but only its owner can edit it.
       </Typography>

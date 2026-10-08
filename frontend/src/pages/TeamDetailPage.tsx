@@ -15,6 +15,7 @@ import {
 import { FormEvent, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
+import { gradientBrandText } from '../glass';
 import { useAuth } from '../auth';
 import { ROLES } from '../constants';
 import { ErrorAlert, useAction, useLoad } from '../hooks';
@@ -51,7 +52,7 @@ export function TeamDetailPage() {
 
   return (
     <>
-      <Typography variant="h4" gutterBottom>{team?.name ?? 'Team'}</Typography>
+      <Typography variant="h4" gutterBottom sx={gradientBrandText}>{team?.name ?? 'Team'}</Typography>
       <ErrorAlert error={loadError || error} />
       {team && !isOwner && <Typography color="text.secondary">Read-only: you are not the owner of this team.</Typography>}
 

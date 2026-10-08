@@ -1,6 +1,8 @@
-import { AppBar, Box, Button, Container, Toolbar, Typography } from '@mui/material';
+import { alpha, AppBar, Box, Button, Container, Toolbar, Typography } from '@mui/material';
 import { Link as RouterLink, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from './auth';
+import { AmbientBackground } from './components/AmbientBackground';
+import { gradientBrandText } from './glass';
 import { Dashboard } from './pages/Dashboard';
 import { LoginPage } from './pages/LoginPage';
 import { MatchPage } from './pages/MatchPage';
@@ -26,13 +28,24 @@ function NavButton({ to, label }: { to: string; label: string }) {
       component={RouterLink}
       to={to}
       sx={{
-        opacity: active ? 1 : 0.72,
-        borderBottom: active ? '2px solid' : '2px solid transparent',
-        borderRadius: 0,
         minWidth: 0,
-        px: 1.5,
-        py: 1.25,
-        '&:hover': { opacity: 1, backgroundColor: 'rgba(255,255,255,0.06)' },
+        px: 1.75,
+        py: 0.75,
+        borderRadius: 2,
+        fontWeight: active ? 600 : 500,
+        color: active ? '#fff' : alpha('#fff', 0.65),
+        background: active
+          ? `linear-gradient(135deg, ${alpha('#6366f1', 0.45)}, ${alpha('#0891b2', 0.25)})`
+          : 'transparent',
+        border: active ? `1px solid ${alpha('#fff', 0.18)}` : '1px solid transparent',
+        boxShadow: active ? `0 4px 20px ${alpha('#6366f1', 0.25)}` : 'none',
+        backdropFilter: active ? 'blur(12px)' : 'none',
+        '&:hover': {
+          color: '#fff',
+          background: active
+            ? `linear-gradient(135deg, ${alpha('#6366f1', 0.55)}, ${alpha('#0891b2', 0.35)})`
+            : alpha('#fff', 0.06),
+        },
       }}
     >
       {label}
@@ -45,14 +58,14 @@ function Layout() {
   if (!session) return <Navigate to="/login" replace />;
 
   return (
-    <>
-      <AppBar position="sticky" color="primary">
-        <Toolbar sx={{ gap: 0.5 }}>
+    <AmbientBackground>
+      <AppBar position="sticky">
+        <Toolbar sx={{ gap: 0.75, flexWrap: 'wrap', py: 0.5 }}>
           <Typography
             variant="h6"
             component={RouterLink}
             to="/"
-            sx={{ color: 'inherit', textDecoration: 'none', mr: 2, fontWeight: 700 }}
+            sx={{ ...gradientBrandText, textDecoration: 'none', mr: 2, fontWeight: 800 }}
           >
             VolleyLab
           </Typography>
@@ -60,10 +73,20 @@ function Layout() {
             <NavButton key={item.to} to={item.to} label={item.label} />
           ))}
           <Box sx={{ flexGrow: 1 }} />
-          <Typography variant="body2" sx={{ mr: 1.5, opacity: 0.9, display: { xs: 'none', sm: 'block' } }}>
+          <Typography variant="body2" sx={{ mr: 1.5, opacity: 0.75, display: { xs: 'none', sm: 'block' } }}>
             {session.user.email}
           </Typography>
-          <Button color="inherit" size="small" onClick={signOut} sx={{ opacity: 0.9 }}>
+          <Button
+            color="inherit"
+            size="small"
+            onClick={signOut}
+            sx={{
+              borderRadius: 2,
+              border: `1px solid ${alpha('#fff', 0.12)}`,
+              px: 1.5,
+              '&:hover': { background: alpha('#fff', 0.06) },
+            }}
+          >
             Log out
           </Button>
         </Toolbar>
@@ -71,7 +94,7 @@ function Layout() {
       <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3 } }}>
         <Outlet />
       </Container>
-    </>
+    </AmbientBackground>
   );
 }
 

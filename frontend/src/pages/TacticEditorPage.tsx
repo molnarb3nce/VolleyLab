@@ -45,6 +45,7 @@ import {
   TACTIC_ACTIONS,
 } from '../constants';
 import { CourtSetup, Point, startingPositions, tokenKey } from '../court';
+import { gradientBrandText } from '../glass';
 import { ErrorAlert, useAction, useFormations, useLoad } from '../hooks';
 import { autoAssign, isRequired, slotsOf } from '../lineup';
 import { usePlayback } from '../playback';
@@ -242,7 +243,7 @@ function Editor({ tactic, info, reload }: { tactic: Tactic; info: FormationsInfo
           All tactics
         </Button>
         <Box sx={{ flex: 1, minWidth: 180 }}>
-          <Typography variant="h5" noWrap>
+          <Typography variant="h5" noWrap sx={gradientBrandText}>
             {meta.name || 'Untitled tactic'}
           </Typography>
           <Typography variant="body2" color="text.secondary">
