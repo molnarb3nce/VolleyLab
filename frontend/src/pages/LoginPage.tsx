@@ -1,4 +1,6 @@
-import { Button, Container, Paper, Stack, TextField, Typography } from '@mui/material';
+import { Box, Button, Container, CssBaseline, Paper, Stack, TextField, Typography } from '@mui/material';
+import { ThemeProvider } from '@mui/material/styles';
+import { theme } from '../theme';
 import { FormEvent, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../auth';
@@ -18,9 +20,15 @@ export function LoginPage() {
   };
 
   return (
-    <Container maxWidth="xs" sx={{ mt: 8 }}>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', display: 'flex', alignItems: 'center', py: 4 }}>
+    <Container maxWidth="xs">
       <Paper sx={{ p: 3 }}>
         <Typography variant="h5" gutterBottom>VolleyLab</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Tactics, matches, and team stats in one place.
+        </Typography>
         <form onSubmit={submit('login')}>
           <Stack spacing={2}>
             <TextField label="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -37,5 +45,7 @@ export function LoginPage() {
         </form>
       </Paper>
     </Container>
+    </Box>
+    </ThemeProvider>
   );
 }

@@ -1,5 +1,5 @@
 import { AppBar, Box, Button, Container, Toolbar, Typography } from '@mui/material';
-import { Link as RouterLink, Navigate, Outlet, Route, Routes } from 'react-router-dom';
+import { Link as RouterLink, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from './auth';
 import { Dashboard } from './pages/Dashboard';
 import { LoginPage } from './pages/LoginPage';
@@ -10,26 +10,65 @@ import { TacticsPage } from './pages/TacticsPage';
 import { TeamDetailPage } from './pages/TeamDetailPage';
 import { TeamsPage } from './pages/TeamsPage';
 
+const NAV = [
+  { label: 'Home', to: '/' },
+  { label: 'Teams', to: '/teams' },
+  { label: 'Matches', to: '/matches' },
+  { label: 'Tactics', to: '/tactics' },
+] as const;
+
+function NavButton({ to, label }: { to: string; label: string }) {
+  const { pathname } = useLocation();
+  const active = to === '/' ? pathname === '/' : pathname === to || pathname.startsWith(`${to}/`);
+  return (
+    <Button
+      color="inherit"
+      component={RouterLink}
+      to={to}
+      sx={{
+        opacity: active ? 1 : 0.72,
+        borderBottom: active ? '2px solid' : '2px solid transparent',
+        borderRadius: 0,
+        minWidth: 0,
+        px: 1.5,
+        py: 1.25,
+        '&:hover': { opacity: 1, backgroundColor: 'rgba(255,255,255,0.06)' },
+      }}
+    >
+      {label}
+    </Button>
+  );
+}
+
 function Layout() {
   const { session, signOut } = useAuth();
   if (!session) return <Navigate to="/login" replace />;
 
   return (
     <>
-      <AppBar position="static">
-        <Toolbar>
-          <Typography variant="h6" component={RouterLink} to="/" sx={{ color: 'inherit', textDecoration: 'none', mr: 3 }}>
+      <AppBar position="sticky" color="primary">
+        <Toolbar sx={{ gap: 0.5 }}>
+          <Typography
+            variant="h6"
+            component={RouterLink}
+            to="/"
+            sx={{ color: 'inherit', textDecoration: 'none', mr: 2, fontWeight: 700 }}
+          >
             VolleyLab
           </Typography>
-          <Button color="inherit" component={RouterLink} to="/teams">Teams</Button>
-          <Button color="inherit" component={RouterLink} to="/matches">Matches</Button>
-          <Button color="inherit" component={RouterLink} to="/tactics">Tactics</Button>
+          {NAV.map((item) => (
+            <NavButton key={item.to} to={item.to} label={item.label} />
+          ))}
           <Box sx={{ flexGrow: 1 }} />
-          <Typography variant="body2" sx={{ mr: 2 }}>{session.user.email}</Typography>
-          <Button color="inherit" onClick={signOut}>Log out</Button>
+          <Typography variant="body2" sx={{ mr: 1.5, opacity: 0.9, display: { xs: 'none', sm: 'block' } }}>
+            {session.user.email}
+          </Typography>
+          <Button color="inherit" size="small" onClick={signOut} sx={{ opacity: 0.9 }}>
+            Log out
+          </Button>
         </Toolbar>
       </AppBar>
-      <Container sx={{ py: 3 }}>
+      <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3 } }}>
         <Outlet />
       </Container>
     </>

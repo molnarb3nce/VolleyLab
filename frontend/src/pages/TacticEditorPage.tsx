@@ -1,25 +1,49 @@
+import AddIcon from '@mui/icons-material/Add';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
+import SaveIcon from '@mui/icons-material/Save';
 import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
   Alert,
+  Box,
   Button,
+  Chip,
+  Collapse,
+  Divider,
+  Grid,
   IconButton,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
   MenuItem,
   Paper,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
 } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { api } from '../api';
 import { Court, toTokens } from '../components/Court';
-import { ACTOR_SIDES, FORMATION_LABEL, FORMATIONS, TACTIC_ACTIONS } from '../constants';
+import {
+  ACTOR_SIDE_LABEL,
+  ACTOR_SIDES,
+  FORMATION_LABEL,
+  FORMATIONS,
+  SLOT_SHORT,
+  TACTIC_ACTION_LABEL,
+  TACTIC_ACTIONS,
+} from '../constants';
 import { CourtSetup, Point, startingPositions, tokenKey } from '../court';
 import { ErrorAlert, useAction, useFormations, useLoad } from '../hooks';
 import { autoAssign, isRequired, slotsOf } from '../lineup';
@@ -54,6 +78,16 @@ function tacticPatch(
   };
 }
 
+function stepTitle(s: TacticStep, index: number): string {
+  if (s.actorSide === 'BALL') return `Step ${index + 1} · Ball`;
+  const slot = s.slot ? (SLOT_SHORT[s.slot] ?? s.slot) : '?';
+  return `Step ${index + 1} · ${TACTIC_ACTION_LABEL[s.action]} (${slot})`;
+}
+
+function stepSubtitle(s: TacticStep): string {
+  return ACTOR_SIDE_LABEL[s.actorSide];
+}
+
 export function TacticEditorPage() {
   const id = Number(useParams().id);
   const info = useFormations();
@@ -78,6 +112,8 @@ function Editor({ tactic, info, reload }: { tactic: Tactic; info: FormationsInfo
   const [steps, setSteps] = useState<TacticStep[]>(() => tactic.steps.map(normalizeStep));
   const [selected, setSelected] = useState(0);
   const [mode, setMode] = useState<EditMode>('step');
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [setupExpanded, setSetupExpanded] = useState(false);
 
   const stepsDirty = !stepsEqual(steps, tactic.steps);
   const baseDirty = JSON.stringify(base) !== JSON.stringify(tactic.basePositions ?? {});
@@ -90,6 +126,10 @@ function Editor({ tactic, info, reload }: { tactic: Tactic; info: FormationsInfo
     meta.opponentRotation !== (tactic.opponentRotation ?? 1) ||
     meta.liberoReplaces !== (tactic.liberoReplaces ?? null);
   const dirty = stepsDirty || baseDirty || metaDirty;
+
+  useEffect(() => {
+    if (metaDirty || baseDirty) setSetupExpanded(true);
+  }, [metaDirty, baseDirty]);
 
   const courtSetup: CourtSetup = useMemo(
     () => ({
@@ -144,6 +184,11 @@ function Editor({ tactic, info, reload }: { tactic: Tactic; info: FormationsInfo
     setMode('step');
   };
 
+  const removeStep = (index: number) => {
+    setSteps(steps.filter((_, j) => j !== index));
+    setSelected(Math.max(0, index - 1));
+  };
+
   const move = (index: number, delta: number) => {
     const target = index + delta;
     if (target < 0 || target >= steps.length) return;
@@ -154,6 +199,13 @@ function Editor({ tactic, info, reload }: { tactic: Tactic; info: FormationsInfo
   };
 
   const num = (value: string) => (value === '' ? 0 : Number(value));
+
+  const saveAll = () =>
+    run(async () => {
+      if (metaDirty || baseDirty) await api.patch(`/tactics/${tactic.id}`, tacticPatch(meta, base));
+      if (stepsDirty) await api.put(`/tactics/${tactic.id}/steps`, { steps: steps.map(normalizeStep) });
+      await reload();
+    });
 
   const selectedStep = steps[selected];
   const selectedKey =
@@ -184,292 +236,343 @@ function Editor({ tactic, info, reload }: { tactic: Tactic; info: FormationsInfo
   };
 
   return (
-    <Stack spacing={3}>
-      <Typography variant="h4">{tactic.name}</Typography>
+    <Stack spacing={2.5}>
+      <Stack direction="row" alignItems="center" spacing={1.5} flexWrap="wrap" useFlexGap>
+        <Button component={Link} to="/tactics" startIcon={<ArrowBackIcon />} color="inherit" sx={{ color: 'text.secondary' }}>
+          All tactics
+        </Button>
+        <Box sx={{ flex: 1, minWidth: 180 }}>
+          <Typography variant="h5" noWrap>
+            {meta.name || 'Untitled tactic'}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {FORMATION_LABEL[meta.formation]} vs {FORMATION_LABEL[meta.opponentFormation]}
+          </Typography>
+        </Box>
+        <Chip
+          size="small"
+          label={dirty ? 'Unsaved changes' : 'Up to date'}
+          color={dirty ? 'warning' : 'success'}
+          variant="outlined"
+        />
+        <Button variant="contained" startIcon={<SaveIcon />} disabled={!dirty} onClick={saveAll}>
+          Save
+        </Button>
+      </Stack>
+
       <ErrorAlert error={error} />
 
-      <Paper sx={{ p: 2 }}>
-        <Typography variant="h6" gutterBottom>
-          Details
-        </Typography>
-        <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
-          <TextField size="small" label="Name" value={meta.name} onChange={(e) => setMeta({ ...meta, name: e.target.value })} />
-          <TextField
-            size="small"
-            label="Description"
-            sx={{ minWidth: 260 }}
-            value={meta.description}
-            onChange={(e) => setMeta({ ...meta, description: e.target.value })}
-          />
-          {(['formation', 'opponentFormation'] as const).map((field) => (
-            <TextField
-              key={field}
-              size="small"
-              select
-              sx={{ width: 150 }}
-              label={field === 'formation' ? 'Own formation' : 'Opponent formation'}
-              value={meta[field]}
-              onChange={(e) => setMeta({ ...meta, [field]: e.target.value as Formation })}
-            >
-              {FORMATIONS.map((f) => (
-                <MenuItem key={f} value={f}>
-                  {FORMATION_LABEL[f]}
-                </MenuItem>
+      <Accordion expanded={setupExpanded} onChange={(_, open) => setSetupExpanded(open)} disableGutters>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography fontWeight={600}>Setup</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ ml: 1.5 }}>
+            Formations, rotation, libero, starting positions
+          </Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Stack spacing={2}>
+            <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
+              <TextField
+                size="small"
+                label="Name"
+                value={meta.name}
+                onChange={(e) => setMeta({ ...meta, name: e.target.value })}
+              />
+              <TextField
+                size="small"
+                label="Description"
+                sx={{ minWidth: 260, flex: 1 }}
+                value={meta.description}
+                onChange={(e) => setMeta({ ...meta, description: e.target.value })}
+              />
+            </Stack>
+            <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
+              {(['formation', 'opponentFormation'] as const).map((field) => (
+                <TextField
+                  key={field}
+                  size="small"
+                  select
+                  sx={{ width: 160 }}
+                  label={field === 'formation' ? 'Our formation' : 'Opponent'}
+                  value={meta[field]}
+                  onChange={(e) => setMeta({ ...meta, [field]: e.target.value as Formation })}
+                >
+                  {FORMATIONS.map((f) => (
+                    <MenuItem key={f} value={f}>
+                      {FORMATION_LABEL[f]}
+                    </MenuItem>
+                  ))}
+                </TextField>
               ))}
-            </TextField>
-          ))}
-          <TextField
-            size="small"
-            select
-            sx={{ width: 130 }}
-            label="Rotation"
-            value={meta.rotation}
-            onChange={(e) => setMeta({ ...meta, rotation: Number(e.target.value) })}
-          >
-            {[1, 2, 3, 4, 5, 6].map((r) => (
-              <MenuItem key={r} value={r}>
-                {r}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            size="small"
-            select
-            sx={{ width: 150 }}
-            label="Opponent rot."
-            value={meta.opponentRotation}
-            onChange={(e) => setMeta({ ...meta, opponentRotation: Number(e.target.value) })}
-          >
-            {[1, 2, 3, 4, 5, 6].map((r) => (
-              <MenuItem key={r} value={r}>
-                {r}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            size="small"
-            select
-            sx={{ minWidth: 200 }}
-            label="Libero replaces"
-            value={meta.liberoReplaces ?? ''}
-            onChange={(e) =>
-              setMeta({ ...meta, liberoReplaces: (e.target.value || null) as Slot | null })
-            }
-          >
-            <MenuItem value="">Nobody (libero off court)</MenuItem>
-            {LIBERO_REPLACE_CHOICES.filter((s) => slotsOf(info, meta.formation).includes(s)).map((slot) => (
-              <MenuItem key={slot} value={slot}>
-                {slot}
-              </MenuItem>
-            ))}
-          </TextField>
-          <Button
-            variant="contained"
-            disabled={!metaDirty && !baseDirty}
-            onClick={() =>
-              run(async () => {
-                await api.patch(`/tactics/${tactic.id}`, tacticPatch(meta, base));
-                await reload();
-              })
-            }
-          >
-            Save details
+              <TextField
+                size="small"
+                select
+                sx={{ width: 120 }}
+                label="Our rotation"
+                value={meta.rotation}
+                onChange={(e) => setMeta({ ...meta, rotation: Number(e.target.value) })}
+              >
+                {[1, 2, 3, 4, 5, 6].map((r) => (
+                  <MenuItem key={r} value={r}>
+                    {r}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                size="small"
+                select
+                sx={{ width: 140 }}
+                label="Opponent rotation"
+                value={meta.opponentRotation}
+                onChange={(e) => setMeta({ ...meta, opponentRotation: Number(e.target.value) })}
+              >
+                {[1, 2, 3, 4, 5, 6].map((r) => (
+                  <MenuItem key={r} value={r}>
+                    {r}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                size="small"
+                select
+                sx={{ minWidth: 220 }}
+                label="Libero replaces"
+                value={meta.liberoReplaces ?? ''}
+                onChange={(e) =>
+                  setMeta({ ...meta, liberoReplaces: (e.target.value || null) as Slot | null })
+                }
+              >
+                <MenuItem value="">Libero off court</MenuItem>
+                {LIBERO_REPLACE_CHOICES.filter((s) => slotsOf(info, meta.formation).includes(s)).map((slot) => (
+                  <MenuItem key={slot} value={slot}>
+                    {slot}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Stack>
+            <Typography variant="body2" color="text.secondary">
+              Rotation 1 places the setter in zone 1; each step rotates everyone one zone clockwise.
+              {meta.liberoReplaces &&
+                (liberoOnCourt(meta.formation, meta.rotation, meta.liberoReplaces)
+                  ? ` Libero is on for ${meta.liberoReplaces}.`
+                  : ` Libero is off (${meta.liberoReplaces} is front row).`)}
+            </Typography>
+          </Stack>
+        </AccordionDetails>
+      </Accordion>
+
+      <Paper sx={{ p: { xs: 1.5, sm: 2.5 } }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" useFlexGap spacing={1}>
+          <Box>
+            <Typography variant="h6">Sequence</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Pick a step, set who does what, then drag on the court. Ball flight is automatic on contacts.
+            </Typography>
+          </Box>
+          <Button startIcon={<AddIcon />} variant="outlined" onClick={addStep}>
+            Add step
           </Button>
         </Stack>
-        <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-          Rotation 1: setter zone 1, MB1 zone 6, OH1 zone 5, opposite zone 4, MB2 zone 3, OH2 zone 2. Each rotation moves
-          everyone one zone clockwise.{' '}
-          {meta.liberoReplaces &&
-            (liberoOnCourt(meta.formation, meta.rotation, meta.liberoReplaces)
-              ? `Libero is on for ${meta.liberoReplaces} (back row).`
-              : `Libero is off: ${meta.liberoReplaces} is front row.`)}
-        </Typography>
-      </Paper>
 
-      <Paper sx={{ p: 2 }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" useFlexGap spacing={1}>
-          <Typography variant="h6">Steps</Typography>
-          <Stack direction="row" spacing={1}>
-            <Button onClick={addStep}>Add step</Button>
-            <Button
-              variant="contained"
-              disabled={!dirty}
-              onClick={() =>
-                run(async () => {
-                  if (metaDirty || baseDirty) await api.patch(`/tactics/${tactic.id}`, tacticPatch(meta, base));
-                  if (stepsDirty) await api.put(`/tactics/${tactic.id}/steps`, { steps: steps.map(normalizeStep) });
-                  await reload();
-                })
-              }
-            >
-              Save steps
-            </Button>
-          </Stack>
-        </Stack>
-        <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
-          You do not need a ball step: on receive / set / attack / block the ball flies to that player. Tempo is how long
-          the player waits (from their base) before running; they meet the ball at the end of Flight.
-        </Typography>
-        <Stack direction={{ xs: 'column', lg: 'row' }} spacing={2} sx={{ mt: 1 }} alignItems="flex-start">
-          <div style={{ overflowX: 'auto', flex: 1 }}>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  {['#', 'Who', 'Slot', 'Action', 'Target', 'x', 'y', 'Flight', 'Tempo', ''].map((h) => (
-                    <TableCell key={h}>{h}</TableCell>
+        <Grid container spacing={2.5} sx={{ mt: 0.5 }}>
+          <Grid item xs={12} md={4}>
+            <Paper variant="outlined" sx={{ borderRadius: 2, overflow: 'hidden', maxHeight: 420, overflowY: 'auto' }}>
+              {steps.length === 0 ? (
+                <Typography color="text.secondary" sx={{ p: 2 }}>
+                  No steps yet. Add one to build the play.
+                </Typography>
+              ) : (
+                <List dense disablePadding>
+                  {steps.map((s, i) => (
+                    <ListItem
+                      key={i}
+                      disablePadding
+                      secondaryAction={
+                        <Stack direction="row" spacing={0}>
+                          <IconButton size="small" aria-label="Move up" disabled={i === 0} onClick={() => move(i, -1)}>
+                            <ArrowUpwardIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            aria-label="Move down"
+                            disabled={i === steps.length - 1}
+                            onClick={() => move(i, 1)}
+                          >
+                            <ArrowDownwardIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton size="small" aria-label="Delete step" onClick={() => removeStep(i)}>
+                            <DeleteOutlineIcon fontSize="small" />
+                          </IconButton>
+                        </Stack>
+                      }
+                    >
+                      <ListItemButton selected={i === selected} onClick={() => setSelected(i)}>
+                        <ListItemText primary={stepTitle(s, i)} secondary={stepSubtitle(s)} />
+                      </ListItemButton>
+                    </ListItem>
                   ))}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {steps.map((s, i) => (
-                  <TableRow key={i} hover selected={i === selected} onClick={() => setSelected(i)}>
-                    <TableCell>{i + 1}</TableCell>
-                    <TableCell>
-                      <TextField
-                        size="small"
-                        select
-                        value={s.actorSide}
-                        onChange={(e) => changeSide(i, e.target.value as ActorSide)}
-                      >
-                        {ACTOR_SIDES.map((a) => (
-                          <MenuItem key={a} value={a}>
-                            {a}
-                          </MenuItem>
-                        ))}
-                      </TextField>
-                    </TableCell>
-                    <TableCell>
-                      <TextField
-                        size="small"
-                        select
-                        sx={{ minWidth: 110 }}
-                        disabled={s.actorSide === 'BALL'}
-                        value={s.slot ?? ''}
-                        onChange={(e) => update(i, { slot: e.target.value as Slot })}
-                      >
-                        {slotsFor(s.actorSide).map((slot) => (
-                          <MenuItem key={slot} value={slot}>
-                            {slot}
-                          </MenuItem>
-                        ))}
-                      </TextField>
-                    </TableCell>
-                    <TableCell>
-                      <TextField
-                        size="small"
-                        select
-                        disabled={s.actorSide === 'BALL'}
-                        value={s.action}
-                        onChange={(e) => update(i, { action: e.target.value as TacticStep['action'], targetSlot: null })}
-                      >
-                        {TACTIC_ACTIONS.map((a) => (
-                          <MenuItem key={a} value={a}>
-                            {a}
-                          </MenuItem>
-                        ))}
-                      </TextField>
-                    </TableCell>
-                    <TableCell>
-                      <TextField
-                        size="small"
-                        select
-                        sx={{ minWidth: 110 }}
-                        disabled={s.action !== 'SET'}
-                        value={s.targetSlot ?? ''}
-                        onChange={(e) => update(i, { targetSlot: (e.target.value || null) as Slot | null })}
-                      >
-                        <MenuItem value="">-</MenuItem>
-                        {slotsFor(s.actorSide).map((slot) => (
-                          <MenuItem key={slot} value={slot}>
-                            {slot}
-                          </MenuItem>
-                        ))}
-                      </TextField>
-                    </TableCell>
-                    <TableCell>
+                </List>
+              )}
+            </Paper>
+          </Grid>
+
+          <Grid item xs={12} md={8}>
+            <Stack spacing={2}>
+              {selectedStep ? (
+                <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
+                  <TextField
+                    size="small"
+                    select
+                    label="Team"
+                    sx={{ minWidth: 130 }}
+                    value={selectedStep.actorSide}
+                    onChange={(e) => changeSide(selected, e.target.value as ActorSide)}
+                  >
+                    {ACTOR_SIDES.map((a) => (
+                      <MenuItem key={a} value={a}>
+                        {ACTOR_SIDE_LABEL[a]}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                  <TextField
+                    size="small"
+                    select
+                    label="Player"
+                    sx={{ minWidth: 120 }}
+                    disabled={selectedStep.actorSide === 'BALL'}
+                    value={selectedStep.slot ?? ''}
+                    onChange={(e) => {
+                      const slot = e.target.value as Slot;
+                      const p = pointOf(selectedStep.actorSide, slot);
+                      update(selected, { slot, x: p.x, y: p.y });
+                    }}
+                  >
+                    {slotsFor(selectedStep.actorSide).map((slot) => (
+                      <MenuItem key={slot} value={slot}>
+                        {SLOT_SHORT[slot] ?? slot}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                  <TextField
+                    size="small"
+                    select
+                    label="Action"
+                    sx={{ minWidth: 120 }}
+                    disabled={selectedStep.actorSide === 'BALL'}
+                    value={selectedStep.action}
+                    onChange={(e) =>
+                      update(selected, { action: e.target.value as TacticStep['action'], targetSlot: null })
+                    }
+                  >
+                    {TACTIC_ACTIONS.map((a) => (
+                      <MenuItem key={a} value={a}>
+                        {TACTIC_ACTION_LABEL[a]}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                  <TextField
+                    size="small"
+                    select
+                    label="Set target"
+                    sx={{ minWidth: 120 }}
+                    disabled={selectedStep.action !== 'SET'}
+                    value={selectedStep.targetSlot ?? ''}
+                    onChange={(e) => update(selected, { targetSlot: (e.target.value || null) as Slot | null })}
+                  >
+                    <MenuItem value="">—</MenuItem>
+                    {slotsFor(selectedStep.actorSide).map((slot) => (
+                      <MenuItem key={slot} value={slot}>
+                        {SLOT_SHORT[slot] ?? slot}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Stack>
+              ) : (
+                <Typography color="text.secondary">Select or add a step to edit it on the court.</Typography>
+              )}
+
+              <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                <Court
+                  tokens={editorTokens}
+                  ghosts={
+                    mode === 'step' && selectedKey && bases[selectedKey]
+                      ? [{ key: `ghost:${selectedKey}`, ...bases[selectedKey] }]
+                      : []
+                  }
+                  markers={steps.map((s, i) => ({ x: s.x, y: s.y, label: String(i + 1), active: i === selected }))}
+                  onPick={mode === 'step' && selectedStep ? (p) => update(selected, p) : undefined}
+                  onDragToken={onDragToken}
+                />
+              </Box>
+
+              <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap" useFlexGap>
+                <ToggleButtonGroup
+                  exclusive
+                  size="small"
+                  value={mode}
+                  onChange={(_, v: EditMode | null) => v && setMode(v)}
+                >
+                  <ToggleButton value="base">Starting positions</ToggleButton>
+                  <ToggleButton value="step">This step</ToggleButton>
+                </ToggleButtonGroup>
+                <Typography variant="body2" color="text.secondary" sx={{ flex: 1, minWidth: 200 }}>
+                  {mode === 'base'
+                    ? 'Drag any token to set where players wait before their step.'
+                    : 'Drag the highlighted player to the contact point (or tap the court).'}
+                </Typography>
+              </Stack>
+
+              {selectedStep && (
+                <>
+                  <Button size="small" onClick={() => setAdvancedOpen((o) => !o)} sx={{ alignSelf: 'flex-start' }}>
+                    {advancedOpen ? 'Hide' : 'Show'} timing & coordinates
+                  </Button>
+                  <Collapse in={advancedOpen}>
+                    <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap sx={{ pt: 0.5 }}>
                       <TextField
                         size="small"
                         type="number"
-                        sx={{ width: 80 }}
+                        label="X"
+                        sx={{ width: 88 }}
                         inputProps={{ min: 0, max: 9, step: 0.1 }}
-                        value={s.x}
-                        onChange={(e) => update(i, { x: num(e.target.value) })}
+                        value={selectedStep.x}
+                        onChange={(e) => update(selected, { x: num(e.target.value) })}
                       />
-                    </TableCell>
-                    <TableCell>
                       <TextField
                         size="small"
                         type="number"
-                        sx={{ width: 80 }}
+                        label="Y"
+                        sx={{ width: 88 }}
                         inputProps={{ min: 0, max: 18, step: 0.1 }}
-                        value={s.y}
-                        onChange={(e) => update(i, { y: num(e.target.value) })}
+                        value={selectedStep.y}
+                        onChange={(e) => update(selected, { y: num(e.target.value) })}
                       />
-                    </TableCell>
-                    <TableCell>
                       <TextField
                         size="small"
                         type="number"
-                        sx={{ width: 90 }}
+                        label="Flight (ms)"
+                        sx={{ width: 120 }}
                         inputProps={{ min: 0, max: 10000, step: 100 }}
-                        value={s.duration}
-                        onChange={(e) => update(i, { duration: num(e.target.value) })}
+                        value={selectedStep.duration}
+                        onChange={(e) => update(selected, { duration: num(e.target.value) })}
                       />
-                    </TableCell>
-                    <TableCell>
                       <TextField
                         size="small"
                         type="number"
-                        sx={{ width: 90 }}
+                        label="Tempo (ms)"
+                        sx={{ width: 120 }}
+                        helperText="Wait before moving from base"
                         inputProps={{ min: 0, max: 10000, step: 50 }}
-                        value={s.delay ?? 0}
-                        onChange={(e) => update(i, { delay: num(e.target.value) })}
+                        value={selectedStep.delay ?? 0}
+                        onChange={(e) => update(selected, { delay: num(e.target.value) })}
                       />
-                    </TableCell>
-                    <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                      <IconButton size="small" onClick={() => move(i, -1)}>
-                        ↑
-                      </IconButton>
-                      <IconButton size="small" onClick={() => move(i, 1)}>
-                        ↓
-                      </IconButton>
-                      <IconButton size="small" onClick={() => (setSteps(steps.filter((_, j) => j !== i)), setSelected(0))}>
-                        ✕
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            {steps.length === 0 && (
-              <Typography color="text.secondary" sx={{ mt: 1 }}>
-                No steps yet.
-              </Typography>
-            )}
-          </div>
-          <Stack spacing={1} sx={{ minWidth: 280 }}>
-            <ToggleButtonGroup exclusive size="small" value={mode} onChange={(_, v: EditMode | null) => v && setMode(v)}>
-              <ToggleButton value="base">Base positions</ToggleButton>
-              <ToggleButton value="step">Step position</ToggleButton>
-            </ToggleButtonGroup>
-            <Typography variant="caption" color="text.secondary">
-              {mode === 'base'
-                ? 'Drag any circle to set where that player (or the ball) starts. Players wait here until their step.'
-                : 'Select a step, then drag the highlighted player to the position of that action.'}
-            </Typography>
-            <Court
-              tokens={editorTokens}
-              ghosts={
-                mode === 'step' && selectedKey && bases[selectedKey]
-                  ? [{ key: `ghost:${selectedKey}`, ...bases[selectedKey] }]
-                  : []
-              }
-              markers={steps.map((s, i) => ({ x: s.x, y: s.y, label: String(i + 1), active: i === selected }))}
-              onPick={mode === 'step' && selectedStep ? (p) => update(selected, p) : undefined}
-              onDragToken={onDragToken}
-            />
-          </Stack>
-        </Stack>
+                    </Stack>
+                  </Collapse>
+                </>
+              )}
+            </Stack>
+          </Grid>
+        </Grid>
       </Paper>
 
       <ValidateAndPlay tactic={tactic} info={info} dirty={dirty} steps={steps} base={base} courtSetup={courtSetup} />
@@ -523,88 +626,111 @@ function ValidateAndPlay({
   );
 
   return (
-    <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-      <Paper sx={{ p: 2, flex: 1 }}>
-        <Typography variant="h6" gutterBottom>
-          Validate with a team
-        </Typography>
-        <Typography variant="caption" color="text.secondary">
-          Checks the team's players, and the sequence against the basic volleyball rules (3 touches, block, libero, ...).
-        </Typography>
-        <Stack spacing={1.5} sx={{ mt: 1 }}>
-          <TextField size="small" select label="Team" value={teamId} onChange={(e) => setTeamId(e.target.value)}>
-            {teams?.map((t) => (
-              <MenuItem key={t.id} value={t.id}>
-                {t.name}
-              </MenuItem>
-            ))}
-          </TextField>
-          {teamId &&
-            slots.map((slot) => (
-              <TextField
-                key={slot}
-                size="small"
-                select
-                label={`${slot}${isRequired(info, tactic.formation, slot) ? '' : ' (optional)'} - ${info.slotRoles[slot]}`}
-                value={assignment[slot] ?? ''}
-                onChange={(e) =>
-                  setAssignment({ ...assignment, [slot]: e.target.value === '' ? undefined : Number(e.target.value) })
-                }
-              >
-                <MenuItem value="">-</MenuItem>
-                {players.map((p) => (
-                  <MenuItem key={p.id} value={p.id}>
-                    #{p.jerseyNumber} {p.name} ({p.role})
-                  </MenuItem>
-                ))}
-              </TextField>
-            ))}
-          <Stack direction="row" spacing={1}>
-            <Button disabled={!teamId} onClick={() => setAssignment(autoAssign(info, tactic.formation, players))}>
-              Auto-fill
-            </Button>
-            <Button variant="contained" disabled={!teamId || dirty} onClick={validate}>
-              Validate
-            </Button>
-          </Stack>
-          {dirty && (
-            <Typography variant="caption" color="warning.main">
-              Save the steps and base positions first: validation uses the saved tactic.
-            </Typography>
-          )}
-          <ErrorAlert error={error} />
-          {result?.valid && <Alert severity="success">Valid: this team can play the tactic.</Alert>}
-          {result && !result.valid && (
-            <Alert severity="error">
-              <b>Not playable:</b>
-              <ul style={{ margin: 0, paddingLeft: 18 }}>
-                {result.problems.map((p) => (
-                  <li key={p}>{p}</li>
-                ))}
-              </ul>
-            </Alert>
-          )}
-        </Stack>
-      </Paper>
-
-      <Paper sx={{ p: 2, flex: 1 }}>
-        <Typography variant="h6" gutterBottom>
-          Playback
-        </Typography>
-        <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
-          Players start at their base. Each contact flies the ball to that player; after an attack it continues over the net.
-        </Typography>
-        <Court tokens={playbackTokens} />
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
-          <Button variant="contained" disabled={steps.length === 0 || playback.playing} onClick={playback.play}>
-            Play
-          </Button>
-          <Button onClick={playback.reset}>Reset</Button>
-          <Typography variant="body2">
-            {playback.activeStep !== null && `Step ${playback.activeStep + 1} of ${steps.length}`}
+    <Grid container spacing={2.5}>
+      <Grid item xs={12} md={6}>
+        <Paper sx={{ p: 2.5, height: '100%' }}>
+          <Typography variant="h6" gutterBottom>
+            Check with a team
           </Typography>
-        </Stack>
-      </Paper>
-    </Stack>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Assign real players and verify the sequence against volleyball rules (touches, libero, block, …).
+          </Typography>
+          <Stack spacing={1.5}>
+            <TextField size="small" select label="Team" value={teamId} onChange={(e) => setTeamId(e.target.value)}>
+              <MenuItem value="">Choose a team…</MenuItem>
+              {teams?.map((t) => (
+                <MenuItem key={t.id} value={t.id}>
+                  {t.name}
+                </MenuItem>
+              ))}
+            </TextField>
+            {teamId &&
+              slots.map((slot) => (
+                <TextField
+                  key={slot}
+                  size="small"
+                  select
+                  label={`${SLOT_SHORT[slot] ?? slot}${isRequired(info, tactic.formation, slot) ? '' : ' (opt.)'} · ${info.slotRoles[slot]}`}
+                  value={assignment[slot] ?? ''}
+                  onChange={(e) =>
+                    setAssignment({ ...assignment, [slot]: e.target.value === '' ? undefined : Number(e.target.value) })
+                  }
+                >
+                  <MenuItem value="">—</MenuItem>
+                  {players.map((p) => (
+                    <MenuItem key={p.id} value={p.id}>
+                      #{p.jerseyNumber} {p.name} ({p.role})
+                    </MenuItem>
+                  ))}
+                </TextField>
+              ))}
+            <Stack direction="row" spacing={1}>
+              <Button disabled={!teamId} onClick={() => setAssignment(autoAssign(info, tactic.formation, players))}>
+                Auto-fill
+              </Button>
+              <Button variant="contained" disabled={!teamId || dirty} onClick={validate}>
+                Validate
+              </Button>
+            </Stack>
+            {dirty && (
+              <Typography variant="body2" color="warning.main">
+                Save your changes first — validation uses the saved tactic on the server.
+              </Typography>
+            )}
+            <ErrorAlert error={error} />
+            {result?.valid && <Alert severity="success">This team can run the tactic.</Alert>}
+            {result && !result.valid && (
+              <Alert severity="error">
+                <Typography fontWeight={600} gutterBottom>
+                  Cannot play as drawn
+                </Typography>
+                <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
+                  {result.problems.map((p) => (
+                    <li key={p}>
+                      <Typography variant="body2">{p}</Typography>
+                    </li>
+                  ))}
+                </Box>
+              </Alert>
+            )}
+          </Stack>
+        </Paper>
+      </Grid>
+
+      <Grid item xs={12} md={6}>
+        <Paper sx={{ p: 2.5, height: '100%' }}>
+          <Typography variant="h6" gutterBottom>
+            Preview
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+            Players start at their base positions. Contacts move the ball; attacks continue over the net.
+          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+            <Court tokens={playbackTokens} />
+          </Box>
+          <Divider sx={{ my: 2 }} />
+          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+            <Button
+              variant="contained"
+              startIcon={<PlayArrowIcon />}
+              disabled={steps.length === 0 || playback.playing}
+              onClick={playback.play}
+            >
+              Play
+            </Button>
+            <Button startIcon={<RestartAltIcon />} onClick={playback.reset}>
+              Reset
+            </Button>
+            {playback.activeStep !== null && (
+              <Chip
+                size="small"
+                label={`Step ${playback.activeStep + 1} / ${steps.length}`}
+                variant="outlined"
+              />
+            )}
+          </Stack>
+        </Paper>
+      </Grid>
+    </Grid>
   );
 }

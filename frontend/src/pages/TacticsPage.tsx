@@ -1,14 +1,12 @@
+import AddIcon from '@mui/icons-material/Add';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import {
+  Box,
   Button,
-  Link as MuiLink,
+  IconButton,
   MenuItem,
   Paper,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
   TextField,
   Typography,
 } from '@mui/material';
@@ -23,7 +21,11 @@ export function TacticsPage() {
   const navigate = useNavigate();
   const { data: tactics, error: loadError, reload } = useLoad(() => api.get<Tactic[]>('/tactics'), []);
   const { error, run } = useAction();
-  const [form, setForm] = useState({ name: '', formation: 'FIVE_ONE' as Formation, opponentFormation: 'FIVE_ONE' as Formation });
+  const [form, setForm] = useState({
+    name: '',
+    formation: 'FIVE_ONE' as Formation,
+    opponentFormation: 'FIVE_ONE' as Formation,
+  });
 
   const create = (e: FormEvent) => {
     e.preventDefault();
@@ -34,44 +36,104 @@ export function TacticsPage() {
   };
 
   const formationField = (label: string, field: 'formation' | 'opponentFormation') => (
-    <TextField size="small" select label={label} sx={{ width: 150 }} value={form[field]} onChange={(e) => setForm({ ...form, [field]: e.target.value as Formation })}>
-      {FORMATIONS.map((f) => <MenuItem key={f} value={f}>{FORMATION_LABEL[f]}</MenuItem>)}
+    <TextField
+      size="small"
+      select
+      label={label}
+      sx={{ width: 150 }}
+      value={form[field]}
+      onChange={(e) => setForm({ ...form, [field]: e.target.value as Formation })}
+    >
+      {FORMATIONS.map((f) => (
+        <MenuItem key={f} value={f}>
+          {FORMATION_LABEL[f]}
+        </MenuItem>
+      ))}
     </TextField>
   );
 
   return (
-    <>
-      <Typography variant="h4" gutterBottom>Tactics</Typography>
-      <Typography color="text.secondary">Tactics belong to your account and work with any compatible team.</Typography>
+    <Stack spacing={2.5}>
+      <Box>
+        <Typography variant="h4" gutterBottom>
+          Tactics
+        </Typography>
+        <Typography color="text.secondary">
+          Draw plays on the court, then preview and validate them with your roster.
+        </Typography>
+      </Box>
       <ErrorAlert error={loadError || error} />
-      <form onSubmit={create}>
-        <Stack direction="row" spacing={2} sx={{ my: 2 }}>
-          <TextField size="small" label="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-          {formationField('Own formation', 'formation')}
-          {formationField('Opponent formation', 'opponentFormation')}
-          <Button type="submit" variant="contained">Create tactic</Button>
+
+      <Paper component="form" onSubmit={create} sx={{ p: 2 }}>
+        <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+          New tactic
+        </Typography>
+        <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap alignItems="center">
+          <TextField
+            size="small"
+            label="Name"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+          />
+          {formationField('Our formation', 'formation')}
+          {formationField('Opponent', 'opponentFormation')}
+          <Button type="submit" variant="contained" startIcon={<AddIcon />} disabled={!form.name.trim()}>
+            Create
+          </Button>
         </Stack>
-      </form>
-      <Paper>
-        <Table size="small">
-          <TableHead>
-            <TableRow><TableCell>Name</TableCell><TableCell>Formation</TableCell><TableCell>Vs.</TableCell><TableCell>Steps</TableCell><TableCell /></TableRow>
-          </TableHead>
-          <TableBody>
-            {tactics?.map((t) => (
-              <TableRow key={t.id}>
-                <TableCell><MuiLink component={Link} to={`/tactics/${t.id}`}>{t.name}</MuiLink></TableCell>
-                <TableCell>{FORMATION_LABEL[t.formation]}</TableCell>
-                <TableCell>{FORMATION_LABEL[t.opponentFormation]}</TableCell>
-                <TableCell>{t._count?.steps ?? 0}</TableCell>
-                <TableCell align="right">
-                  <Button size="small" color="error" onClick={() => confirm(`Delete "${t.name}"?`) && run(async () => (await api.del(`/tactics/${t.id}`), reload()))}>Delete</Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
       </Paper>
-    </>
+
+      <Stack spacing={1}>
+        {tactics?.length === 0 && (
+          <Typography color="text.secondary" sx={{ py: 2 }}>
+            No tactics yet — create one above.
+          </Typography>
+        )}
+        {tactics?.map((t) => (
+          <Paper
+            key={t.id}
+            sx={{
+              transition: 'box-shadow 0.15s ease',
+              '&:hover': { boxShadow: '0 4px 20px rgba(15,23,42,0.08)' },
+            }}
+          >
+            <Stack direction="row" alignItems="center" sx={{ px: 1, py: 0.5 }}>
+              <Box
+                component={Link}
+                to={`/tactics/${t.id}`}
+                sx={{
+                  flex: 1,
+                  minWidth: 0,
+                  px: 1.5,
+                  py: 1,
+                  textDecoration: 'none',
+                  color: 'inherit',
+                  borderRadius: 1,
+                  '&:hover': { bgcolor: 'action.hover' },
+                }}
+              >
+                <Typography fontWeight={600} noWrap>
+                  {t.name}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {FORMATION_LABEL[t.formation]} vs {FORMATION_LABEL[t.opponentFormation]} · {t._count?.steps ?? 0}{' '}
+                  steps
+                </Typography>
+              </Box>
+              <IconButton component={Link} to={`/tactics/${t.id}`} aria-label="Open tactic" size="small">
+                <ChevronRightIcon />
+              </IconButton>
+              <Button
+                size="small"
+                color="error"
+                onClick={() => confirm(`Delete "${t.name}"?`) && run(async () => (await api.del(`/tactics/${t.id}`), reload()))}
+              >
+                Delete
+              </Button>
+            </Stack>
+          </Paper>
+        ))}
+      </Stack>
+    </Stack>
   );
 }

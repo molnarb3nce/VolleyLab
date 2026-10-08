@@ -1,5 +1,5 @@
 import { MouseEvent, PointerEvent, useRef } from 'react';
-import { COURT } from '../constants';
+import { COURT, SLOT_SHORT } from '../constants';
 import { Point } from '../court';
 
 export interface Token extends Point {
@@ -90,18 +90,33 @@ export function Court({
       viewBox={`-1 -1 ${COURT.width + 2} ${COURT.height + 2}`}
       style={{
         width: '100%',
-        maxWidth: 420,
-        background: '#e8f1fb',
+        maxWidth: 440,
+        display: 'block',
+        borderRadius: 12,
+        boxShadow: '0 4px 24px rgba(15, 23, 42, 0.12)',
         cursor: onPick ? 'crosshair' : 'default',
         touchAction: 'none',
         userSelect: 'none',
       }}
       onClick={onCourtClick}
     >
-      <rect x={0} y={0} width={COURT.width} height={COURT.height} fill="#f3c98b" stroke="#fff" strokeWidth={0.1} />
-      <line x1={0} y1={6} x2={COURT.width} y2={6} stroke="#fff" strokeWidth={0.08} />
-      <line x1={0} y1={12} x2={COURT.width} y2={12} stroke="#fff" strokeWidth={0.08} />
-      <line x1={-0.5} y1={9} x2={COURT.width + 0.5} y2={9} stroke="#333" strokeWidth={0.15} />
+      <defs>
+        <linearGradient id="courtFloor" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#e8c896" />
+          <stop offset="100%" stopColor="#d4a574" />
+        </linearGradient>
+      </defs>
+      <rect x={0} y={0} width={COURT.width} height={COURT.height} fill="url(#courtFloor)" rx={0.15} />
+      <rect x={0} y={0} width={COURT.width} height={COURT.height} fill="none" stroke="#fff" strokeWidth={0.12} rx={0.15} />
+      <line x1={0} y1={6} x2={COURT.width} y2={6} stroke="#fff" strokeWidth={0.08} opacity={0.85} />
+      <line x1={0} y1={12} x2={COURT.width} y2={12} stroke="#fff" strokeWidth={0.08} opacity={0.85} />
+      <line x1={-0.5} y1={9} x2={COURT.width + 0.5} y2={9} stroke="#1e293b" strokeWidth={0.18} />
+      <text x={COURT.width / 2} y={8.55} textAnchor="middle" fontSize={0.35} fill="#64748b" style={{ pointerEvents: 'none' }}>
+        our side
+      </text>
+      <text x={COURT.width / 2} y={9.45} textAnchor="middle" fontSize={0.35} fill="#64748b" style={{ pointerEvents: 'none' }}>
+        opponent
+      </text>
 
       {ghosts.map((g, i) => (
         <circle
@@ -118,9 +133,17 @@ export function Court({
       ))}
 
       {markers.map((m, i) => (
-        <g key={i} opacity={m.active ? 1 : 0.6}>
-          <circle cx={m.x} cy={m.y} r={m.active ? 0.35 : 0.25} fill={m.active ? '#d32f2f' : '#555'} />
-          <text x={m.x + 0.4} y={m.y - 0.3} fontSize={0.5} fill="#222">
+        <g key={i} opacity={m.active ? 1 : 0.45}>
+          <circle cx={m.x} cy={m.y} r={m.active ? 0.38 : 0.28} fill={m.active ? '#c62828' : '#94a3b8'} />
+          <text
+            x={m.x}
+            y={m.y + 0.16}
+            textAnchor="middle"
+            fontSize={0.42}
+            fill="#fff"
+            fontWeight={600}
+            style={{ pointerEvents: 'none' }}
+          >
             {m.label}
           </text>
         </g>
@@ -139,8 +162,14 @@ export function Court({
           onPointerUp={onTokenUp}
           onPointerCancel={onTokenUp}
         >
-          {t.highlight && <circle r={0.9} fill="none" stroke="#fbc02d" strokeWidth={0.14} />}
-          <circle r={t.key === 'BALL' ? 0.35 : 0.65} fill={t.color} stroke="#fff" strokeWidth={0.06} />
+          {t.highlight && <circle r={0.92} fill="none" stroke="#f59e0b" strokeWidth={0.12} opacity={0.95} />}
+          <circle
+            r={t.key === 'BALL' ? 0.38 : 0.68}
+            fill={t.color}
+            stroke="#fff"
+            strokeWidth={0.07}
+            style={{ filter: 'drop-shadow(0 0.06px 0.12px rgba(0,0,0,0.25))' }}
+          />
           <text textAnchor="middle" y={0.18} fontSize={0.45} fill="#fff" style={{ pointerEvents: 'none' }}>
             {t.label}
           </text>
@@ -149,17 +178,6 @@ export function Court({
     </svg>
   );
 }
-
-const SLOT_SHORT: Record<string, string> = {
-  SETTER_1: 'S1',
-  SETTER_2: 'S2',
-  OPPOSITE: 'OP',
-  OUTSIDE_1: 'O1',
-  OUTSIDE_2: 'O2',
-  MIDDLE_1: 'M1',
-  MIDDLE_2: 'M2',
-  LIBERO: 'L',
-};
 
 /** Turns a position map (see court.ts) into drawable tokens. */
 export function toTokens(
