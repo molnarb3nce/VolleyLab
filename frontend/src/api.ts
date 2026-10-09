@@ -1,4 +1,11 @@
-const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+function apiBaseUrl(): string {
+  const raw = import.meta.env.VITE_API_URL;
+  const base =
+    typeof raw === 'string' && raw.trim() !== '' ? raw.trim() : 'http://localhost:3000';
+  return base.replace(/\/+$/, '');
+}
+
+const API = apiBaseUrl();
 
 let token: string | null = null;
 let unauthorizedHandler: () => void = () => {};
@@ -20,11 +27,24 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
+  let data: unknown = null;
+  if (text) {
+    try {
+      data = JSON.parse(text) as unknown;
+    } catch {
+      if (/^\s*</.test(text)) {
+        throw new Error(
+          'Got a web page instead of API JSON. Set VITE_API_URL to your backend URL (not the frontend), enable it at Docker build time on Railway, then redeploy the web service.',
+        );
+      }
+      throw new Error('Server returned a non-JSON response.');
+    }
+  }
   if (!res.ok) {
     // A 401 on a protected call means the token is gone or expired (login errors stay visible).
     if (res.status === 401 && token) unauthorizedHandler();
-    const message = Array.isArray(data?.message) ? data.message.join('; ') : data?.message;
+    const body = data as { message?: string | string[] } | null;
+    const message = Array.isArray(body?.message) ? body.message.join('; ') : body?.message;
     throw new Error(message ?? `HTTP ${res.status}`);
   }
   return data as T;
