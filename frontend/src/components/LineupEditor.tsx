@@ -80,7 +80,7 @@ function SideLineup({ match, matchTeam, formations, onChanged }: Props & { match
           </TextField>
         ))}
         <ErrorAlert error={error} />
-        <Stack direction="row" spacing={1}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} useFlexGap>
           <Button disabled={locked} onClick={() => setAssignment(autoAssign(formations, formation, players))}>Auto-fill</Button>
           <Button variant="contained" disabled={locked} onClick={save}>Save lineup</Button>
         </Stack>

@@ -41,7 +41,7 @@ export function TacticsPage() {
       size="small"
       select
       label={label}
-      sx={{ width: 150 }}
+      sx={{ width: { xs: '100%', sm: 150 } }}
       value={form[field]}
       onChange={(e) => setForm({ ...form, [field]: e.target.value as Formation })}
     >
@@ -69,10 +69,12 @@ export function TacticsPage() {
         <Typography variant="subtitle1" fontWeight={600} gutterBottom>
           New tactic
         </Typography>
-        <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap alignItems="center">
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} flexWrap="wrap" useFlexGap alignItems={{ sm: 'center' }}>
           <TextField
             size="small"
             label="Name"
+            fullWidth
+            sx={{ flex: { sm: 1 }, minWidth: { sm: 160 } }}
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
           />

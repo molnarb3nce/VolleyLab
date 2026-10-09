@@ -1,4 +1,4 @@
-import { Button, Chip, Stack, Typography } from '@mui/material';
+import { Box, Button, Chip, Stack, Typography } from '@mui/material';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../api';
@@ -29,18 +29,29 @@ export function MatchPage() {
 
   if (!match || !formations) return <ErrorAlert error={loadError} />;
   const [home, away] = [match.teams.find((t) => t.side === 'HOME'), match.teams.find((t) => t.side === 'AWAY')];
+  const inProgress = match.status === 'IN_PROGRESS';
 
   return (
-    <Stack spacing={3}>
-      <Stack direction="row" alignItems="center" spacing={2}>
-        <Typography variant="h4" sx={gradientBrandText}>{home?.team.name} vs {away?.team.name}</Typography>
-        <Chip label={match.status} color={match.status === 'IN_PROGRESS' ? 'success' : 'default'} />
-        {match.status === 'PLANNED' && <Button variant="contained" onClick={() => setStatus('IN_PROGRESS')}>Start match</Button>}
-        {match.status === 'IN_PROGRESS' && (
-          <Button variant="outlined" color="error" onClick={() => confirm('Finish the match? It cannot be reopened.') && setStatus('FINISHED')}>
-            Finish match
-          </Button>
-        )}
+    <Stack spacing={3} sx={{ pb: inProgress ? { xs: 28, md: 0 } : 0 }}>
+      <Stack spacing={1.5}>
+        <Typography variant="h4" sx={{ ...gradientBrandText, fontSize: { xs: '1.35rem', sm: '2rem' } }}>
+          {home?.team.name} vs {away?.team.name}
+        </Typography>
+        <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap" useFlexGap>
+          <Chip label={match.status} color={inProgress ? 'success' : 'default'} />
+          {match.status === 'PLANNED' && (
+            <Button variant="contained" onClick={() => setStatus('IN_PROGRESS')}>Start match</Button>
+          )}
+          {inProgress && (
+            <Button
+              variant="outlined"
+              color="error"
+              onClick={() => confirm('Finish the match? It cannot be reopened.') && setStatus('FINISHED')}
+            >
+              Finish match
+            </Button>
+          )}
+        </Stack>
       </Stack>
       <ErrorAlert error={loadError || error} />
       {match.status === 'PLANNED' && (
@@ -49,7 +60,11 @@ export function MatchPage() {
 
       <LineupEditor match={match} formations={formations} onChanged={refresh} />
       <SetsPanel match={match} onChanged={refresh} />
-      {match.status === 'IN_PROGRESS' && <LiveRecorder match={match} version={version} onChanged={refresh} />}
+      {inProgress && (
+        <Box>
+          <LiveRecorder match={match} version={version} onChanged={refresh} stickyOnMobile />
+        </Box>
+      )}
       <StatsTable matchId={id} version={version} />
     </Stack>
   );

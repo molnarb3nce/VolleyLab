@@ -30,6 +30,8 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
@@ -96,6 +98,61 @@ function stepSubtitle(s: TacticStep, index: number): string {
   return s.parallelWithPrevious && index > 0 ? `${side} · parallel with step ${index}` : side;
 }
 
+function StepList({
+  steps,
+  selected,
+  onSelect,
+  onMove,
+  onRemove,
+}: {
+  steps: TacticStep[];
+  selected: number;
+  onSelect: (i: number) => void;
+  onMove: (i: number, delta: number) => void;
+  onRemove: (i: number) => void;
+}) {
+  return (
+    <Paper variant="outlined" sx={{ borderRadius: 2, overflow: 'hidden', maxHeight: 420, overflowY: 'auto' }}>
+      {steps.length === 0 ? (
+        <Typography color="text.secondary" sx={{ p: 2 }}>
+          No steps yet. Add one to build the play.
+        </Typography>
+      ) : (
+        <List dense disablePadding>
+          {steps.map((s, i) => (
+            <ListItem
+              key={i}
+              disablePadding
+              secondaryAction={
+                <Stack direction="row" spacing={0}>
+                  <IconButton size="small" aria-label="Move up" disabled={i === 0} onClick={() => onMove(i, -1)}>
+                    <ArrowUpwardIcon fontSize="small" />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    aria-label="Move down"
+                    disabled={i === steps.length - 1}
+                    onClick={() => onMove(i, 1)}
+                  >
+                    <ArrowDownwardIcon fontSize="small" />
+                  </IconButton>
+                  <IconButton size="small" aria-label="Delete step" onClick={() => onRemove(i)}>
+                    <DeleteOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Stack>
+              }
+            >
+              <ListItemButton selected={i === selected} onClick={() => onSelect(i)}>
+                <ListItemText primary={stepTitle(s, i)} secondary={stepSubtitle(s, i)} />
+              </ListItemButton>
+            </ListItem>
+          ))}
+        </List>
+      )}
+    </Paper>
+  );
+}
+
 export function TacticEditorPage() {
   const id = Number(useParams().id);
   const info = useFormations();
@@ -106,6 +163,8 @@ export function TacticEditorPage() {
 }
 
 function Editor({ tactic, info, reload }: { tactic: Tactic; info: FormationsInfo; reload: () => Promise<void> }) {
+  const theme = useTheme();
+  const compactSteps = useMediaQuery(theme.breakpoints.down('md'));
   const { error, run } = useAction();
   const [meta, setMeta] = useState({
     name: tactic.name,
@@ -387,44 +446,34 @@ function Editor({ tactic, info, reload }: { tactic: Tactic; info: FormationsInfo
 
         <Grid container spacing={2.5} sx={{ mt: 0.5 }}>
           <Grid item xs={12} md={4}>
-            <Paper variant="outlined" sx={{ borderRadius: 2, overflow: 'hidden', maxHeight: 420, overflowY: 'auto' }}>
-              {steps.length === 0 ? (
-                <Typography color="text.secondary" sx={{ p: 2 }}>
-                  No steps yet. Add one to build the play.
-                </Typography>
-              ) : (
-                <List dense disablePadding>
-                  {steps.map((s, i) => (
-                    <ListItem
-                      key={i}
-                      disablePadding
-                      secondaryAction={
-                        <Stack direction="row" spacing={0}>
-                          <IconButton size="small" aria-label="Move up" disabled={i === 0} onClick={() => move(i, -1)}>
-                            <ArrowUpwardIcon fontSize="small" />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            aria-label="Move down"
-                            disabled={i === steps.length - 1}
-                            onClick={() => move(i, 1)}
-                          >
-                            <ArrowDownwardIcon fontSize="small" />
-                          </IconButton>
-                          <IconButton size="small" aria-label="Delete step" onClick={() => removeStep(i)}>
-                            <DeleteOutlineIcon fontSize="small" />
-                          </IconButton>
-                        </Stack>
-                      }
-                    >
-                      <ListItemButton selected={i === selected} onClick={() => setSelected(i)}>
-                        <ListItemText primary={stepTitle(s, i)} secondary={stepSubtitle(s, i)} />
-                      </ListItemButton>
-                    </ListItem>
-                  ))}
-                </List>
-              )}
-            </Paper>
+            {compactSteps ? (
+              <Accordion
+                defaultExpanded={false}
+                disableGutters
+                sx={{ borderRadius: 2, overflow: 'hidden', '&:before': { display: 'none' } }}
+              >
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography fontWeight={600}>Steps ({steps.length})</Typography>
+                </AccordionSummary>
+                <AccordionDetails sx={{ p: 0 }}>
+                  <StepList
+                    steps={steps}
+                    selected={selected}
+                    onSelect={setSelected}
+                    onMove={move}
+                    onRemove={removeStep}
+                  />
+                </AccordionDetails>
+              </Accordion>
+            ) : (
+              <StepList
+                steps={steps}
+                selected={selected}
+                onSelect={setSelected}
+                onMove={move}
+                onRemove={removeStep}
+              />
+            )}
           </Grid>
 
           <Grid item xs={12} md={8}>

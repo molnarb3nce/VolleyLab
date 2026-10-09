@@ -1,4 +1,4 @@
-import { MouseEvent, PointerEvent, useEffect, useId, useRef, useState } from 'react';
+import { PointerEvent, useEffect, useId, useRef, useState } from 'react';
 import { COURT, SLOT_SHORT } from '../constants';
 import { Point } from '../court';
 
@@ -85,6 +85,7 @@ function CourtToken({
 
   return (
     <g
+      data-court-token=""
       transform={`translate(${pos.x}, ${pos.y})`}
       style={{ cursor: dragCursor }}
       onPointerDown={onPointerDown}
@@ -140,14 +141,21 @@ export function Court({
     return clampPoint(p.x, p.y);
   };
 
-  const onCourtClick = (e: MouseEvent<SVGSVGElement>) => {
+  const pickAt = (clientX: number, clientY: number) => {
+    if (!onPick) return;
+    const p = toPoint(clientX, clientY);
+    if (p) onPick(p);
+  };
+
+  const onCourtPointerUp = (e: PointerEvent<SVGSVGElement>) => {
     if (skipClick.current) {
       skipClick.current = false;
       return;
     }
     if (!onPick) return;
-    const p = toPoint(e.clientX, e.clientY);
-    if (p) onPick(p);
+    const target = e.target as Element;
+    if (target.closest('[data-court-token]')) return;
+    pickAt(e.clientX, e.clientY);
   };
 
   const onTokenDown = (key: string) => (e: PointerEvent<SVGGElement>) => {
@@ -185,7 +193,7 @@ export function Court({
         touchAction: 'none',
         userSelect: 'none',
       }}
-      onClick={onCourtClick}
+      onPointerUp={onCourtPointerUp}
     >
       <defs>
         <linearGradient id={floorId} x1="0" y1="0" x2="0" y2="1">

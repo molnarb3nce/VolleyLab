@@ -29,6 +29,16 @@ export const theme = createTheme({
     h6: { fontWeight: 600 },
   },
   components: {
+    MuiContainer: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          [theme.breakpoints.down('sm')]: {
+            paddingLeft: theme.spacing(2),
+            paddingRight: theme.spacing(2),
+          },
+        }),
+      },
+    },
     MuiCssBaseline: {
       styleOverrides: {
         body: {

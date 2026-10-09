@@ -2,7 +2,6 @@ import {
   Button,
   Chip,
   MenuItem,
-  Paper,
   Stack,
   Table,
   TableBody,
@@ -18,6 +17,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
 import { gradientBrandText } from '../glass';
 import { useAuth } from '../auth';
+import { TableScroll } from '../components/TableScroll';
 import { ROLES } from '../constants';
 import { ErrorAlert, useAction, useLoad } from '../hooks';
 import { Role, Team } from '../types';
@@ -53,16 +53,21 @@ export function TeamDetailPage() {
 
   return (
     <>
-      <Typography variant="h4" gutterBottom sx={gradientBrandText}>{team?.name ?? 'Team'}</Typography>
+      <Typography variant="h4" gutterBottom sx={{ ...gradientBrandText, fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
+        {team?.name ?? 'Team'}
+      </Typography>
       <ErrorAlert error={loadError || error} />
       {team && !isOwner && <Typography color="text.secondary">Read-only: you are not the owner of this team.</Typography>}
 
       {isOwner && (
-        <Stack direction="row" spacing={2} sx={{ my: 2 }}>
-          <TextField size="small" label="Team name" value={name} onChange={(e) => setName(e.target.value)} />
-          <Button onClick={() => run(async () => (await api.patch(`/teams/${id}`, { name }), reload()))}>Rename</Button>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ my: 2 }} useFlexGap alignItems={{ sm: 'center' }}>
+          <TextField size="small" label="Team name" value={name} onChange={(e) => setName(e.target.value)} fullWidth />
+          <Button sx={{ flexShrink: 0 }} onClick={() => run(async () => (await api.patch(`/teams/${id}`, { name }), reload()))}>
+            Rename
+          </Button>
           <Button
             color="error"
+            sx={{ flexShrink: 0 }}
             onClick={() =>
               confirm('Delete this team?') &&
               run(async () => (await api.del(`/teams/${id}`), navigate('/teams')))
@@ -73,8 +78,8 @@ export function TeamDetailPage() {
         </Stack>
       )}
 
-      <Paper sx={{ my: 2 }}>
-        <Table size="small">
+      <TableScroll sx={{ my: 2 }}>
+        <Table size="small" sx={{ minWidth: 640 }}>
           <TableHead>
             <TableRow>
               <TableCell>#</TableCell>
@@ -108,7 +113,7 @@ export function TeamDetailPage() {
                 </TableCell>
                 <TableCell align="right">
                   {isOwner && (
-                    <>
+                    <Stack direction="row" spacing={0.5} justifyContent="flex-end" flexWrap="wrap" useFlexGap>
                       <Button size="small" onClick={() => renamePlayer(p.id, p.name)}>Rename</Button>
                       {p.isActive ? (
                         <Button
@@ -130,31 +135,40 @@ export function TeamDetailPage() {
                           Reactivate
                         </Button>
                       )}
-                    </>
+                    </Stack>
                   )}
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
-      </Paper>
+      </TableScroll>
 
       {isOwner && (
         <form onSubmit={addPlayer}>
-          <Stack direction="row" spacing={2}>
-            <TextField size="small" label="Name" value={player.name} onChange={(e) => setPlayer({ ...player, name: e.target.value })} />
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} useFlexGap alignItems={{ sm: 'flex-end' }}>
+            <TextField size="small" label="Name" value={player.name} onChange={(e) => setPlayer({ ...player, name: e.target.value })} fullWidth />
             <TextField
               size="small"
               type="number"
               label="Jersey #"
-              sx={{ width: 110 }}
+              sx={{ width: { xs: '100%', sm: 110 } }}
               value={player.jerseyNumber}
               onChange={(e) => setPlayer({ ...player, jerseyNumber: e.target.value })}
             />
-            <TextField size="small" select label="Role" sx={{ width: 190 }} value={player.role} onChange={(e) => setPlayer({ ...player, role: e.target.value as Role })}>
+            <TextField
+              size="small"
+              select
+              label="Role"
+              sx={{ width: { xs: '100%', sm: 190 } }}
+              value={player.role}
+              onChange={(e) => setPlayer({ ...player, role: e.target.value as Role })}
+            >
               {ROLES.map((r) => <MenuItem key={r} value={r}>{r}</MenuItem>)}
             </TextField>
-            <Button type="submit" variant="contained">Add player</Button>
+            <Button type="submit" variant="contained" sx={{ flexShrink: 0, width: { xs: '100%', sm: 'auto' } }}>
+              Add player
+            </Button>
           </Stack>
         </form>
       )}

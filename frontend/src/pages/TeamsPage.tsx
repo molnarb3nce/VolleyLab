@@ -3,7 +3,7 @@ import {
   Checkbox,
   FormControlLabel,
   Link as MuiLink,
-  Paper,
+  MenuItem,
   Stack,
   Table,
   TableBody,
@@ -18,6 +18,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { gradientBrandText } from '../glass';
 import { useAuth } from '../auth';
+import { TableScroll } from '../components/TableScroll';
 import { ErrorAlert, useAction, useLoad } from '../hooks';
 import { Team } from '../types';
 
@@ -48,17 +49,23 @@ export function TeamsPage() {
       </Typography>
       <ErrorAlert error={loadError || error} />
       <form onSubmit={create}>
-        <Stack direction="row" spacing={2} sx={{ my: 2 }}>
-          <TextField size="small" label="New team name" value={name} onChange={(e) => setName(e.target.value)} />
-          <Button type="submit" variant="contained">Create team</Button>
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          spacing={2}
+          alignItems={{ xs: 'stretch', sm: 'center' }}
+          sx={{ my: 2 }}
+          useFlexGap
+        >
+          <TextField size="small" label="New team name" value={name} onChange={(e) => setName(e.target.value)} fullWidth />
+          <Button type="submit" variant="contained" sx={{ flexShrink: 0 }}>Create team</Button>
           <FormControlLabel
             control={<Checkbox checked={mine} onChange={(e) => setMine(e.target.checked)} />}
             label="Only my teams"
           />
         </Stack>
       </form>
-      <Paper>
-        <Table size="small">
+      <TableScroll>
+        <Table size="small" sx={{ minWidth: 480 }}>
           <TableHead>
             <TableRow><TableCell>Name</TableCell><TableCell>Active players</TableCell><TableCell>Owner</TableCell></TableRow>
           </TableHead>
@@ -72,7 +79,7 @@ export function TeamsPage() {
             ))}
           </TableBody>
         </Table>
-      </Paper>
+      </TableScroll>
     </>
   );
 }
