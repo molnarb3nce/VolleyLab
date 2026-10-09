@@ -3,7 +3,15 @@ import { TacticStep } from './types';
 /** Fields the API accepts when creating or replacing steps. */
 export type TacticStepPayload = Pick<
   TacticStep,
-  'actorSide' | 'slot' | 'targetSlot' | 'action' | 'x' | 'y' | 'duration' | 'delay'
+  | 'actorSide'
+  | 'slot'
+  | 'targetSlot'
+  | 'action'
+  | 'x'
+  | 'y'
+  | 'duration'
+  | 'delay'
+  | 'parallelWithPrevious'
 >;
 
 export function normalizeStep(step: TacticStep): TacticStepPayload {
@@ -16,6 +24,7 @@ export function normalizeStep(step: TacticStep): TacticStepPayload {
     y: step.y,
     duration: step.duration,
     delay: step.delay ?? 0,
+    parallelWithPrevious: step.parallelWithPrevious ?? false,
   };
 }
 

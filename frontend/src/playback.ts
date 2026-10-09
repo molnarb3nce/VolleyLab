@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CourtSetup, Point, startingPositions, tokenKey } from './court';
 import { onCourtTokenKey } from './rotation';
-import { Slot } from './types';
-import { TacticStep } from './types';
+import { Slot, TacticStep } from './types';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -13,6 +12,28 @@ function overNet(from: Point): Point {
   return from.y >= 9 ? { x: from.x, y: 6 } : { x: from.x, y: 12 };
 }
 
+function actorFor(step: TacticStep, setup: CourtSetup): string {
+  return step.actorSide === 'OWN' && step.slot
+    ? onCourtTokenKey(
+        'OWN',
+        step.slot as Slot,
+        setup.ownFormation,
+        setup.rotation,
+        setup.liberoReplaces,
+      )
+    : tokenKey(step.actorSide, step.slot);
+}
+
+/** Consecutive steps with `parallelWithPrevious` join the same playback batch. */
+export function stepBatches(steps: TacticStep[]): number[][] {
+  const batches: number[][] = [];
+  for (let i = 0; i < steps.length; i++) {
+    if (i > 0 && steps[i].parallelWithPrevious) batches[batches.length - 1].push(i);
+    else batches.push([i]);
+  }
+  return batches;
+}
+
 /**
  * Replays a play from the saved base positions.
  *
@@ -21,6 +42,8 @@ function overNet(from: Point): Point {
  * same time fly the ball there. `delay` is tempo: the player waits that many
  * ms, then runs so they arrive when the ball does. After an attack the ball
  * continues across the net, unless the next step is a block.
+ *
+ * Steps marked “with previous” run in the same batch (in parallel).
  */
 export function usePlayback(setup: CourtSetup, steps: TacticStep[], base: Record<string, Point> = {}) {
   const initial = useCallback(() => startingPositions(setup, base), [setup, base]);
@@ -50,50 +73,71 @@ export function usePlayback(setup: CourtSetup, steps: TacticStep[], base: Record
     await sleep(80);
     if (!still()) return;
 
-    for (const [index, step] of steps.entries()) {
-      if (!still()) return;
-      setActiveStep(index);
-      const dest = { x: step.x, y: step.y };
-      const duration = step.duration;
-      const delay = Math.min(step.delay ?? 0, duration);
-      const actor =
-        step.actorSide === 'OWN' && step.slot
-          ? onCourtTokenKey(
-              'OWN',
-              step.slot as Slot,
-              setup.ownFormation,
-              setup.rotation,
-              setup.liberoReplaces,
-            )
-          : tokenKey(step.actorSide, step.slot);
-      const next = steps[index + 1];
-      const isTouch = step.actorSide !== 'BALL' && TOUCH.has(step.action);
-      const playerMs = Math.max(0, duration - delay);
+    const batches = stepBatches(steps);
 
-      if (step.actorSide === 'BALL') {
-        setTransitions({ BALL: duration });
-        setPositions((p) => ({ ...p, BALL: dest }));
-        await sleep(duration + 80);
-        continue;
+    for (const batch of batches) {
+      if (!still()) return;
+      setActiveStep(batch[0]);
+
+      const trans: Record<string, number> = {};
+      let ballDest: Point | undefined;
+
+      type Move = { actor: string; dest: Point; delay: number; playerMs: number; ballOnly: boolean };
+      const moves: Move[] = [];
+
+      for (const index of batch) {
+        const step = steps[index];
+        const dest = { x: step.x, y: step.y };
+        const duration = step.duration;
+        const delay = Math.min(step.delay ?? 0, duration);
+        const playerMs = Math.max(0, duration - delay);
+        const isTouch = step.actorSide !== 'BALL' && TOUCH.has(step.action);
+
+        if (step.actorSide === 'BALL') {
+          trans.BALL = duration;
+          ballDest = dest;
+          moves.push({ actor: 'BALL', dest, delay: 0, playerMs: duration, ballOnly: true });
+          continue;
+        }
+
+        const actor = actorFor(step, setup);
+        trans[actor] = playerMs;
+        if (isTouch) {
+          trans.BALL = Math.max(trans.BALL ?? 0, duration);
+          ballDest = dest;
+        }
+        moves.push({ actor, dest, delay, playerMs, ballOnly: false });
       }
 
-      const trans: Record<string, number> = { [actor]: playerMs };
-      if (isTouch) trans.BALL = duration;
       setTransitions(trans);
+      if (ballDest) setPositions((p) => ({ ...p, BALL: ballDest! }));
 
-      if (isTouch) setPositions((p) => ({ ...p, BALL: dest }));
-      if (delay > 0) {
-        await sleep(delay);
-        if (!still()) return;
-      }
-      setPositions((p) => ({ ...p, [actor]: dest }));
-      await sleep(playerMs + 80);
+      await Promise.all(
+        moves.map(async (m) => {
+          if (m.ballOnly) {
+            setPositions((p) => ({ ...p, BALL: m.dest }));
+            await sleep(m.playerMs + 80);
+            return;
+          }
+          if (m.delay > 0) {
+            await sleep(m.delay);
+            if (!still()) return;
+          }
+          setPositions((p) => ({ ...p, [m.actor]: m.dest }));
+          await sleep(m.playerMs + 80);
+        }),
+      );
       if (!still()) return;
 
-      if (step.action === 'ATTACK' && next?.action !== 'BLOCK' && next?.actorSide !== 'BALL') {
+      for (const index of batch) {
+        const step = steps[index];
+        const next = steps[index + 1];
+        if (step.action !== 'ATTACK' || next?.action === 'BLOCK' || next?.actorSide === 'BALL') continue;
+        const dest = { x: step.x, y: step.y };
         setTransitions({ BALL: 700 });
         setPositions((p) => ({ ...p, BALL: overNet(dest) }));
         await sleep(780);
+        if (!still()) return;
       }
     }
 

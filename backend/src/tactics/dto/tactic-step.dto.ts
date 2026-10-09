@@ -1,5 +1,5 @@
 import { ActorSide, Slot, TacticAction } from '@prisma/client';
-import { IsEnum, IsInt, IsNumber, IsOptional, Max, Min } from 'class-validator';
+import { IsBoolean, IsEnum, IsInt, IsNumber, IsOptional, Max, Min } from 'class-validator';
 import { COURT, MAX_STEP_DURATION_MS } from '../tactic-rules';
 
 export class TacticStepDto {
@@ -41,4 +41,8 @@ export class TacticStepDto {
   @Min(0)
   @Max(MAX_STEP_DURATION_MS)
   delay?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  parallelWithPrevious?: boolean;
 }

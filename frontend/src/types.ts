@@ -101,6 +101,8 @@ export interface TacticStep {
   duration: number;
   /** Tempo: ms the player waits before running. The ball flies for `duration`. */
   delay: number;
+  /** When true, this step runs at the same time as the step above it in preview playback. */
+  parallelWithPrevious?: boolean;
 }
 
 export interface TacticStepFromApi extends TacticStep {

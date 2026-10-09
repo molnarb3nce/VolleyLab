@@ -1,4 +1,4 @@
-import { MouseEvent, PointerEvent, useId, useRef } from 'react';
+import { MouseEvent, PointerEvent, useEffect, useId, useRef, useState } from 'react';
 import { COURT, SLOT_SHORT } from '../constants';
 import { Point } from '../court';
 
@@ -31,6 +31,91 @@ function clampPoint(x: number, y: number): Point {
     x: round(Math.min(COURT.width, Math.max(0, x))),
     y: round(Math.min(COURT.height, Math.max(0, y))),
   };
+}
+
+/** Token drawn at local origin; position uses SVG transform (user units) so label and circle stay aligned. */
+function CourtToken({
+  token,
+  courtTransitionMs,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
+  dragCursor,
+}: {
+  token: Token;
+  courtTransitionMs: number;
+  dragCursor?: string;
+  onPointerDown: (e: PointerEvent<SVGGElement>) => void;
+  onPointerMove: (e: PointerEvent<SVGGElement>) => void;
+  onPointerUp: (e: PointerEvent<SVGGElement>) => void;
+}) {
+  const ms = token.transitionMs ?? courtTransitionMs;
+  const posRef = useRef({ x: token.x, y: token.y });
+  const [pos, setPos] = useState(() => ({ x: token.x, y: token.y }));
+  const frameRef = useRef(0);
+
+  useEffect(() => {
+    const target = { x: token.x, y: token.y };
+    const from = posRef.current;
+    if (from.x === target.x && from.y === target.y) return;
+
+    cancelAnimationFrame(frameRef.current);
+
+    if (ms <= 0) {
+      posRef.current = target;
+      setPos(target);
+      return;
+    }
+
+    const start = performance.now();
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / ms);
+      const next = {
+        x: from.x + (target.x - from.x) * t,
+        y: from.y + (target.y - from.y) * t,
+      };
+      posRef.current = next;
+      setPos(next);
+      if (t < 1) frameRef.current = requestAnimationFrame(step);
+      else posRef.current = target;
+    };
+    frameRef.current = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frameRef.current);
+  }, [token.x, token.y, ms]);
+
+  return (
+    <g
+      transform={`translate(${pos.x}, ${pos.y})`}
+      style={{ cursor: dragCursor }}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+    >
+      {token.highlight && (
+        <circle cx={0} cy={0} r={0.92} fill="none" stroke="#fcd34d" strokeWidth={0.12} opacity={0.95} />
+      )}
+      <circle
+        cx={0}
+        cy={0}
+        r={token.key === 'BALL' ? 0.38 : 0.68}
+        fill={token.color}
+        stroke="#fff"
+        strokeWidth={0.07}
+        style={{ filter: 'drop-shadow(0 0.06px 0.12px rgba(0,0,0,0.25))' }}
+      />
+      <text
+        x={0}
+        y={0.18}
+        textAnchor="middle"
+        fontSize={0.45}
+        fill="#fff"
+        style={{ pointerEvents: 'none' }}
+      >
+        {token.label}
+      </text>
+    </g>
+  );
 }
 
 /** Volleyball court (x 0..9, y 0..18, net at y = 9) drawn as SVG. */
@@ -153,40 +238,15 @@ export function Court({
       ))}
 
       {tokens.map((t) => (
-        <g
+        <CourtToken
           key={t.key}
-          style={{ cursor: onDragToken ? 'grab' : undefined }}
+          token={t}
+          courtTransitionMs={transitionMs}
+          dragCursor={onDragToken ? 'grab' : undefined}
           onPointerDown={onTokenDown(t.key)}
           onPointerMove={onTokenMove}
           onPointerUp={onTokenUp}
-          onPointerCancel={onTokenUp}
-        >
-          {t.highlight && (
-            <circle cx={t.x} cy={t.y} r={0.92} fill="none" stroke="#fcd34d" strokeWidth={0.12} opacity={0.95} />
-          )}
-          <circle
-            cx={t.x}
-            cy={t.y}
-            r={t.key === 'BALL' ? 0.38 : 0.68}
-            fill={t.color}
-            stroke="#fff"
-            strokeWidth={0.07}
-            style={{
-              filter: 'drop-shadow(0 0.06px 0.12px rgba(0,0,0,0.25))',
-              transition: `cx ${t.transitionMs ?? transitionMs}ms linear, cy ${t.transitionMs ?? transitionMs}ms linear`,
-            }}
-          />
-          <text
-            x={t.x}
-            y={t.y + 0.18}
-            textAnchor="middle"
-            fontSize={0.45}
-            fill="#fff"
-            style={{ pointerEvents: 'none' }}
-          >
-            {t.label}
-          </text>
-        </g>
+        />
       ))}
     </svg>
   );

@@ -176,6 +176,7 @@ function toStepRows(steps: TacticStepDto[]) {
     y: s.y,
     duration: s.duration,
     delay: s.delay ?? 0,
+    parallelWithPrevious: s.parallelWithPrevious ?? false,
   }));
 }
 

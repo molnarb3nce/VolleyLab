@@ -91,8 +91,9 @@ function stepTitle(s: TacticStep, index: number): string {
   return `Step ${index + 1} · ${TACTIC_ACTION_LABEL[s.action]} (${slot})`;
 }
 
-function stepSubtitle(s: TacticStep): string {
-  return ACTOR_SIDE_LABEL[s.actorSide];
+function stepSubtitle(s: TacticStep, index: number): string {
+  const side = ACTOR_SIDE_LABEL[s.actorSide];
+  return s.parallelWithPrevious && index > 0 ? `${side} · parallel with step ${index}` : side;
 }
 
 export function TacticEditorPage() {
@@ -417,7 +418,7 @@ function Editor({ tactic, info, reload }: { tactic: Tactic; info: FormationsInfo
                       }
                     >
                       <ListItemButton selected={i === selected} onClick={() => setSelected(i)}>
-                        <ListItemText primary={stepTitle(s, i)} secondary={stepSubtitle(s)} />
+                        <ListItemText primary={stepTitle(s, i)} secondary={stepSubtitle(s, i)} />
                       </ListItemButton>
                     </ListItem>
                   ))}
@@ -496,6 +497,18 @@ function Editor({ tactic, info, reload }: { tactic: Tactic; info: FormationsInfo
                       </MenuItem>
                     ))}
                   </TextField>
+                  <ToggleButton
+                    size="small"
+                    value="parallel"
+                    selected={!!selectedStep.parallelWithPrevious}
+                    disabled={selected === 0}
+                    onChange={() =>
+                      update(selected, { parallelWithPrevious: !selectedStep.parallelWithPrevious })
+                    }
+                    sx={{ px: 1.5, textTransform: 'none' }}
+                  >
+                    With previous step
+                  </ToggleButton>
                 </Stack>
               ) : (
                 <Typography color="text.secondary">Select or add a step to edit it on the court.</Typography>

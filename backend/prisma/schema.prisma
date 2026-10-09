@@ -281,6 +281,8 @@ model TacticStep {
   duration   Int
   /// Tempo: ms after the step starts before the actor starts moving (the ball flies for the whole duration).
   delay      Int          @default(0)
+  /// When true, preview playback runs this step in parallel with the previous step.
+  parallelWithPrevious Boolean @default(false)
 
   tactic Tactic @relation(fields: [tacticId], references: [id], onDelete: Cascade)
 
