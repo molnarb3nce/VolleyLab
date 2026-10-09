@@ -1,12 +1,21 @@
+declare global {
+  interface Window {
+    __VOLLEYLAB_API_URL__?: string;
+  }
+}
+
 function apiBaseUrl(): string {
+  const runtime = window.__VOLLEYLAB_API_URL__?.trim();
+  if (runtime) return runtime.replace(/\/+$/, '');
   const raw = import.meta.env.VITE_API_URL;
   const base =
     typeof raw === 'string' && raw.trim() !== '' ? raw.trim() : 'http://localhost:3000';
   return base.replace(/\/+$/, '');
 }
 
-const API = apiBaseUrl();
-
+function getApiBaseUrl(): string {
+  return apiBaseUrl();
+}
 let token: string | null = null;
 let unauthorizedHandler: () => void = () => {};
 
@@ -18,7 +27,7 @@ export const onUnauthorized = (handler: () => void) => {
 };
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const res = await fetch(API + path, {
+  const res = await fetch(getApiBaseUrl() + path, {
     method,
     headers: {
       'Content-Type': 'application/json',
@@ -34,7 +43,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     } catch {
       if (/^\s*</.test(text)) {
         throw new Error(
-          'Got a web page instead of API JSON. Set VITE_API_URL to your backend URL (not the frontend), enable it at Docker build time on Railway, then redeploy the web service.',
+          'Got a web page instead of API JSON. On Railway web service set API_URL to your backend URL (not this site), redeploy, and check /runtime-config.js shows that URL.',
         );
       }
       throw new Error('Server returned a non-JSON response.');

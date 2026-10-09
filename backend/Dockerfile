@@ -1,5 +1,6 @@
 # Production image for Railway (or any Docker host).
 FROM node:20-alpine AS build
+RUN apk add --no-cache openssl
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
@@ -8,15 +9,15 @@ COPY . .
 RUN npm run build
 
 FROM node:20-alpine
+RUN apk add --no-cache openssl
 WORKDIR /app
 ENV NODE_ENV=production
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
-# Skip postinstall (prisma generate): production deps omit the CLI; client is copied from build.
 RUN npm ci --omit=dev --ignore-scripts
 COPY --from=build /app/dist ./dist
-COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=build /app/node_modules/@prisma/client ./node_modules/@prisma/client
-RUN npm install prisma@6 --no-save
+RUN npm install prisma@6 --no-save && npx prisma generate
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 EXPOSE 3000
-CMD ["npm", "run", "start:deploy"]
+ENTRYPOINT ["/docker-entrypoint.sh"]

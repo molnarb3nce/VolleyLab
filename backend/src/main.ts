@@ -8,6 +8,11 @@ async function bootstrap() {
   configureApp(app);
   setupSwagger(app);
   app.enableCors({ origin: corsOrigins() });
-  await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
+  const port = Number(process.env.PORT) || 3000;
+  await app.listen(port, '0.0.0.0');
+  console.log(`VolleyLab API listening on port ${port}`);
 }
-bootstrap();
+bootstrap().catch((err) => {
+  console.error('Failed to start API:', err);
+  process.exit(1);
+});
