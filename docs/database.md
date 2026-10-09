@@ -14,7 +14,7 @@ npx prisma migrate dev        # apply migrations, create new ones after schema c
 npm test
 ```
 
-pgAdmin runs at <http://localhost:5050> (login `admin@volleylab.local` / `admin`).
+pgAdmin runs at <http://localhost:5050> (login `admin@volleylab.dev` / `admin`).
 Register the local server with: host `db` (the compose service name), port `5432`,
 database `volleylab`, user `volleylab`, password `volleylab`.
 
@@ -39,6 +39,6 @@ may need "Developer: Reload Window" before it sees the new generated types.
 
 ## Deployment
 
-Hosting (for example Railway) is intentionally not set up yet. The focus is on getting the
-application to work locally first.
+Production hosting is documented in [deployment-railway.md](./deployment-railway.md) (PostgreSQL on
+Railway, API and web as separate services, migrations on API startup).
  

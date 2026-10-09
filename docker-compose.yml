@@ -1,7 +1,7 @@
 # Local development infrastructure: PostgreSQL + pgAdmin.
 #   docker compose up -d
 # PostgreSQL: localhost:5432 (user/password/db: volleylab)
-# pgAdmin:    http://localhost:5050 (login: admin@volleylab.local / admin)
+# pgAdmin:    http://localhost:5050 (login: admin@volleylab.dev / admin)
 services:
   db:
     image: postgres:16
@@ -24,7 +24,7 @@ services:
     image: dpage/pgadmin4:8
     container_name: volleylab-pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@volleylab.local
+      PGADMIN_DEFAULT_EMAIL: admin@volleylab.dev
       PGADMIN_DEFAULT_PASSWORD: admin
       PGADMIN_CONFIG_SERVER_MODE: "False"
       PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
