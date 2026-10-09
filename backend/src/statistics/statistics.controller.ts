@@ -20,6 +20,11 @@ export class StatisticsController {
     return this.statistics.forMatch(user.id, id, setId === undefined ? undefined : parseId(setId));
   }
 
+  @Get('statistics/overview')
+  overview(@CurrentUser() user: AuthUser) {
+    return this.statistics.overview(user.id);
+  }
+
   @Get('players/:id/statistics')
   forPlayer(@CurrentUser() user: AuthUser, @Param('id', ParseIdPipe) id: number) {
     return this.statistics.forPlayer(user.id, id);

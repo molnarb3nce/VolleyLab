@@ -100,6 +100,15 @@ describe('Statistics (e2e)', () => {
     await getStats(`/matches/${matchId}/statistics?setId=abc`).expect(400);
   });
 
+  it('overview aggregates events across all own matches', async () => {
+    const res = await getStats('/statistics/overview').expect(200);
+    expect(res.body.totalEvents).toBe(6);
+    expect(res.body.stats.attack.kills).toBe(2);
+    expect(res.body.byAction.find((a: { action: string }) => a.action === 'ATTACK').count).toBe(4);
+    expect(res.body.topAttackers[0].kills).toBe(2);
+    expect(res.body.recentMatches).toHaveLength(1);
+  });
+
   describe('player statistics', () => {
     it('aggregates the events of all own matches', async () => {
       const attacker = home.players[2];

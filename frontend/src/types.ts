@@ -91,6 +91,34 @@ export interface MatchStatistics {
   players: { playerId: number; teamId: number; name: string; jerseyNumber: number; stats: Stats }[];
 }
 
+export interface PlayerStatistics {
+  playerId: number;
+  name: string;
+  jerseyNumber: number;
+  role: Role;
+  teamId: number;
+  teamName: string;
+  isActive: boolean;
+  matches: number;
+  stats: Stats;
+}
+
+export interface StatisticsOverview {
+  totalEvents: number;
+  matchesWithEvents: number;
+  stats: Stats;
+  byAction: { action: EventAction; count: number }[];
+  topAttackers: {
+    playerId: number;
+    teamId: number;
+    name: string;
+    jerseyNumber: number;
+    kills: number;
+    attempts: number;
+  }[];
+  recentMatches: { matchId: number; label: string; eventCount: number; playedAt: string }[];
+}
+
 export interface TacticStep {
   actorSide: ActorSide;
   slot: Slot | null;

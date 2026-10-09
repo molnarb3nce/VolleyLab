@@ -1,53 +1,111 @@
-import { alpha, Card, CardActionArea, CardContent, Grid, Typography } from '@mui/material';
-import { Link } from 'react-router-dom';
+import BoltIcon from '@mui/icons-material/Bolt';
+import GroupsIcon from '@mui/icons-material/Groups';
+import SportsIcon from '@mui/icons-material/Sports';
+import SportsVolleyballIcon from '@mui/icons-material/SportsVolleyball';
+import { alpha, Box, Card, CardActionArea, CardContent, Grid, Paper, Stack, Typography } from '@mui/material';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
-import { gradientBrandText } from '../glass';
+import {
+  ActionMixChart,
+  MatchActivityChart,
+  TopAttackersChart,
+} from '../components/StatCharts';
+import { glass, gradientBrandText } from '../glass';
 import { ErrorAlert, useLoad } from '../hooks';
-import { Match, Tactic, Team } from '../types';
+import { attackEfficiency, useAnimatedNumber } from '../stats-display';
+import { Match, StatisticsOverview, Tactic, Team } from '../types';
 
 const CARD_ACCENTS = ['#818cf8', '#22d3ee', '#34d399'] as const;
 
 export function Dashboard() {
+  const navigate = useNavigate();
   const { data, error } = useLoad(async () => {
-    const [teams, matches, tactics] = await Promise.all([
+    const [teams, matches, tactics, overview] = await Promise.all([
       api.get<Team[]>('/teams?mine=true'),
       api.get<Match[]>('/matches'),
       api.get<Tactic[]>('/tactics'),
+      api.get<StatisticsOverview>('/statistics/overview'),
     ]);
-    return { teams: teams.length, matches: matches.length, tactics: tactics.length };
+    return {
+      counts: { teams: teams.length, matches: matches.length, tactics: tactics.length },
+      overview,
+    };
   }, []);
 
+  const events = useAnimatedNumber(data?.overview.totalEvents ?? 0);
+  const kills = useAnimatedNumber(data?.overview.stats.attack.kills ?? 0);
+  const eff = data?.overview ? attackEfficiency(data.overview.stats) : 0;
+  const effAnim = useAnimatedNumber(eff);
+
   const cards = [
-    { title: 'My teams', count: data?.teams, to: '/teams' },
-    { title: 'My matches', count: data?.matches, to: '/matches' },
-    { title: 'My tactics', count: data?.tactics, to: '/tactics' },
+    { title: 'My teams', count: data?.counts.teams, to: '/teams', icon: GroupsIcon },
+    { title: 'My matches', count: data?.counts.matches, to: '/matches', icon: SportsVolleyballIcon },
+    { title: 'My tactics', count: data?.counts.tactics, to: '/tactics', icon: SportsIcon },
   ];
 
   return (
     <>
-      <Typography variant="h4" gutterBottom sx={gradientBrandText}>
-        Dashboard
-      </Typography>
-      <Typography color="text.secondary" sx={{ mb: 2 }}>
-        Your volleyball workspace at a glance.
-      </Typography>
+      <Paper
+        sx={{
+          ...glass,
+          p: { xs: 2.5, sm: 4 },
+          mb: 3,
+          position: 'relative',
+          overflow: 'hidden',
+          '@keyframes pulseGlow': {
+            '0%, 100%': { opacity: 0.45, transform: 'scale(1)' },
+            '50%': { opacity: 0.75, transform: 'scale(1.05)' },
+          },
+        }}
+      >
+        <Box
+          aria-hidden
+          sx={{
+            position: 'absolute',
+            inset: -40,
+            background:
+              'radial-gradient(ellipse 60% 50% at 20% 20%, rgba(99,102,241,0.35), transparent), radial-gradient(ellipse 50% 40% at 80% 60%, rgba(34,211,238,0.25), transparent)',
+            animation: 'pulseGlow 8s ease-in-out infinite',
+            pointerEvents: 'none',
+          }}
+        />
+        <Stack spacing={1} sx={{ position: 'relative' }}>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <BoltIcon sx={{ color: '#67e8f9' }} />
+            <Typography variant="overline" sx={{ letterSpacing: 2, color: alpha('#fff', 0.65) }}>
+              Live insights
+            </Typography>
+          </Stack>
+          <Typography variant="h3" sx={{ ...gradientBrandText, fontWeight: 800, fontSize: { xs: '1.75rem', sm: '2.25rem' } }}>
+            Welcome back, coach
+          </Typography>
+          <Typography color="text.secondary" maxWidth={520}>
+            Your match data powers these charts — every reception, kill, and ace from the matches you record.
+          </Typography>
+          <Stack direction="row" flexWrap="wrap" gap={3} sx={{ mt: 2 }} useFlexGap>
+            <HeroMetric label="Events logged" value={events} suffix="" accent="#818cf8" />
+            <HeroMetric label="Attack kills" value={kills} suffix="" accent="#f472b6" />
+            <HeroMetric label="Attack efficiency" value={effAnim} suffix="%" accent="#34d399" />
+            <HeroMetric label="Matches with data" value={data?.overview.matchesWithEvents ?? 0} suffix="" accent="#22d3ee" />
+          </Stack>
+        </Stack>
+      </Paper>
+
       <ErrorAlert error={error} />
-      <Grid container spacing={2.5}>
+
+      <Grid container spacing={2.5} sx={{ mb: 3 }}>
         {cards.map((c, i) => (
           <Grid item xs={12} sm={4} key={c.title}>
-            <Card
-              sx={{
-                position: 'relative',
-                overflow: 'hidden',
-                '&:hover': { transform: 'translateY(-2px)' },
-              }}
-            >
+            <Card sx={{ position: 'relative', overflow: 'hidden', '&:hover': { transform: 'translateY(-3px)' }, transition: 'transform 0.25s' }}>
               <BoxGlow color={CARD_ACCENTS[i % CARD_ACCENTS.length]} />
               <CardActionArea component={Link} to={c.to} sx={{ position: 'relative' }}>
                 <CardContent sx={{ py: 2.5 }}>
-                  <Typography color="text.secondary" variant="body2" fontWeight={600}>
-                    {c.title}
-                  </Typography>
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <c.icon sx={{ color: CARD_ACCENTS[i], opacity: 0.9 }} />
+                    <Typography color="text.secondary" variant="body2" fontWeight={600}>
+                      {c.title}
+                    </Typography>
+                  </Stack>
                   <Typography
                     variant="h3"
                     sx={{
@@ -66,7 +124,64 @@ export function Dashboard() {
           </Grid>
         ))}
       </Grid>
+
+      <Grid container spacing={2.5}>
+        <Grid item xs={12} md={4}>
+          <Paper sx={{ ...glass, p: 2.5, height: '100%' }}>
+            <Typography variant="h6" gutterBottom>
+              Action mix
+            </Typography>
+            <ActionMixChart data={data?.overview.byAction ?? []} />
+          </Paper>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <Paper sx={{ ...glass, p: 2.5, height: '100%' }}>
+            <Typography variant="h6" gutterBottom>
+              Top attackers
+            </Typography>
+            <TopAttackersChart
+              data={data?.overview.topAttackers ?? []}
+              onPlayerClick={(id) => {
+                const row = data?.overview.topAttackers.find((p: { playerId: number; teamId: number }) => p.playerId === id);
+                if (row) navigate(`/teams/${row.teamId}/players/${id}`);
+              }}
+            />
+          </Paper>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <Paper sx={{ ...glass, p: 2.5, height: '100%' }}>
+            <Typography variant="h6" gutterBottom>
+              Recent match activity
+            </Typography>
+            <MatchActivityChart data={data?.overview.recentMatches ?? []} />
+          </Paper>
+        </Grid>
+      </Grid>
     </>
+  );
+}
+
+function HeroMetric({
+  label,
+  value,
+  suffix,
+  accent,
+}: {
+  label: string;
+  value: number;
+  suffix: string;
+  accent: string;
+}) {
+  return (
+    <Box>
+      <Typography variant="caption" color="text.secondary" display="block">
+        {label}
+      </Typography>
+      <Typography variant="h4" fontWeight={800} sx={{ color: accent, fontVariantNumeric: 'tabular-nums' }}>
+        {value}
+        {suffix}
+      </Typography>
+    </Box>
   );
 }
 

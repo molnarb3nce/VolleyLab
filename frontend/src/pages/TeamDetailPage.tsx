@@ -12,8 +12,9 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { FormEvent, useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
 import { gradientBrandText } from '../glass';
 import { useAuth } from '../auth';
@@ -75,15 +76,36 @@ export function TeamDetailPage() {
       <Paper sx={{ my: 2 }}>
         <Table size="small">
           <TableHead>
-            <TableRow><TableCell>#</TableCell><TableCell>Name</TableCell><TableCell>Role</TableCell><TableCell /><TableCell /></TableRow>
+            <TableRow>
+              <TableCell>#</TableCell>
+              <TableCell>Name</TableCell>
+              <TableCell>Role</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell align="right">Stats</TableCell>
+              <TableCell align="right">Manage</TableCell>
+            </TableRow>
           </TableHead>
           <TableBody>
             {team?.players?.map((p) => (
               <TableRow key={p.id} sx={{ opacity: p.isActive ? 1 : 0.5 }}>
                 <TableCell>{p.jerseyNumber}</TableCell>
-                <TableCell>{p.name}</TableCell>
-                <TableCell>{p.role}</TableCell>
+                <TableCell>
+                  <Link to={`/teams/${id}/players/${p.id}`} style={{ color: 'inherit', fontWeight: 600, textDecoration: 'none' }}>
+                    {p.name}
+                  </Link>
+                </TableCell>
+                <TableCell>{p.role.replace(/_/g, ' ')}</TableCell>
                 <TableCell>{!p.isActive && <Chip size="small" label="inactive" />}</TableCell>
+                <TableCell align="right">
+                  <Button
+                    size="small"
+                    component={Link}
+                    to={`/teams/${id}/players/${p.id}`}
+                    endIcon={<ChevronRightIcon />}
+                  >
+                    Stats
+                  </Button>
+                </TableCell>
                 <TableCell align="right">
                   {isOwner && (
                     <>
