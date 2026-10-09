@@ -1,5 +1,5 @@
 import { ActorSide, Formation, Slot } from './types';
-import { layoutSide } from './rotation';
+import { layoutSide, liberoOnCourt } from './rotation';
 
 export interface Point {
   x: number;
@@ -34,11 +34,46 @@ export function startPositions(setup: CourtSetup): Record<string, Point> {
   };
 }
 
+/**
+ * Keeps only base keys that belong on court for this rotation/libero state.
+ * When the libero enters or leaves, carries the saved point between `OWN:LIBERO`
+ * and `OWN:<replaced slot>` so the player does not vanish after rotating.
+ */
+export function reconcileBasePositions(setup: CourtSetup, base: Record<string, Point>): Record<string, Point> {
+  const onCourt = startPositions(setup);
+  const onCourtKeys = new Set(Object.keys(onCourt));
+  const out: Record<string, Point> = {};
+
+  const rep = setup.liberoReplaces;
+  const libIn = !!rep && liberoOnCourt(setup.ownFormation, setup.rotation, rep);
+  if (rep) {
+    const slotKey = `OWN:${rep}`;
+    const libKey = 'OWN:LIBERO';
+    if (libIn || onCourtKeys.has(libKey)) {
+      if (base[libKey]) out[libKey] = base[libKey];
+      else if (onCourtKeys.has(libKey) && base[slotKey]) out[libKey] = base[slotKey];
+    }
+    if (!libIn || onCourtKeys.has(slotKey)) {
+      if (base[slotKey]) out[slotKey] = base[slotKey];
+      else if (!libIn && onCourtKeys.has(slotKey) && base[libKey]) out[slotKey] = base[libKey];
+    }
+  }
+
+  for (const key of onCourtKeys) {
+    if (key in out) continue;
+    if (key in base) out[key] = base[key];
+  }
+  if ('BALL' in base) out.BALL = base.BALL;
+
+  return out;
+}
+
 /** Rotation defaults overlaid with saved base positions (only keys still on court are drawn). */
 export function startingPositions(setup: CourtSetup, base: Record<string, Point> = {}): Record<string, Point> {
   const defaults = startPositions(setup);
   const merged = { ...defaults };
-  for (const [key, point] of Object.entries(base)) {
+  const reconciled = reconcileBasePositions(setup, base);
+  for (const [key, point] of Object.entries(reconciled)) {
     if (key in defaults || key === 'BALL') merged[key] = point;
   }
   return merged;

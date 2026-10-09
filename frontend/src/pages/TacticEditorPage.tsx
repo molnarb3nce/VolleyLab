@@ -49,7 +49,13 @@ import { gradientBrandText } from '../glass';
 import { ErrorAlert, useAction, useFormations, useLoad } from '../hooks';
 import { autoAssign, isRequired, slotsOf } from '../lineup';
 import { usePlayback } from '../playback';
-import { LIBERO_REPLACE_CHOICES, liberoOnCourt, onCourtTokenKey } from '../rotation';
+import {
+  LIBERO_REPLACE_CHOICES,
+  liberoAtZone1,
+  liberoMaskedSlot,
+  liberoOnCourt,
+  onCourtTokenKey,
+} from '../rotation';
 import { normalizeStep, stepsEqual } from '../tactic-steps';
 import { ActorSide, Formation, FormationsInfo, Slot, Tactic, TacticStep, Team } from '../types';
 
@@ -143,8 +149,7 @@ function Editor({ tactic, info, reload }: { tactic: Tactic; info: FormationsInfo
     [meta],
   );
 
-  const defaults = useMemo(() => startingPositions(courtSetup), [courtSetup]);
-  const bases = useMemo(() => ({ ...defaults, ...base }), [defaults, base]);
+  const bases = useMemo(() => startingPositions(courtSetup, base), [courtSetup, base]);
 
   const slotsFor = (side: ActorSide): Slot[] =>
     side === 'BALL' ? [] : slotsOf(info, side === 'OWN' ? meta.formation : meta.opponentFormation);
@@ -352,11 +357,15 @@ function Editor({ tactic, info, reload }: { tactic: Tactic; info: FormationsInfo
               </TextField>
             </Stack>
             <Typography variant="body2" color="text.secondary">
-              Rotation 1 places the setter in zone 1; each step rotates everyone one zone clockwise.
+              Rotation 1: S1→1, M1→6, O1→5, OP→4, M2→3, O2→2. Each rotation subtracts 1 from every zone (1 wraps to 6).
               {meta.liberoReplaces &&
-                (liberoOnCourt(meta.formation, meta.rotation, meta.liberoReplaces)
-                  ? ` Libero is on for ${meta.liberoReplaces}.`
-                  : ` Libero is off (${meta.liberoReplaces} is front row).`)}
+                (liberoAtZone1(meta.formation, meta.rotation, meta.liberoReplaces)
+                  ? ` Libero in zone 1 (covers ${liberoMaskedSlot(meta.formation, meta.rotation, meta.liberoReplaces)}); ${meta.liberoReplaces} plays zone 4.`
+                  : liberoOnCourt(meta.formation, meta.rotation, meta.liberoReplaces)
+                    ? liberoMaskedSlot(meta.formation, meta.rotation, meta.liberoReplaces) === meta.liberoReplaces
+                      ? ` Libero on for ${meta.liberoReplaces} (back row).`
+                      : ` Libero covers ${liberoMaskedSlot(meta.formation, meta.rotation, meta.liberoReplaces)} (${meta.liberoReplaces} on court).`
+                    : '')}
             </Typography>
           </Stack>
         </AccordionDetails>

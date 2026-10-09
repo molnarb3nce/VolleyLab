@@ -155,25 +155,35 @@ export function Court({
       {tokens.map((t) => (
         <g
           key={t.key}
-          style={{
-            transform: `translate(${t.x}px, ${t.y}px)`,
-            transition: `transform ${t.transitionMs ?? transitionMs}ms linear`,
-            cursor: onDragToken ? 'grab' : undefined,
-          }}
+          style={{ cursor: onDragToken ? 'grab' : undefined }}
           onPointerDown={onTokenDown(t.key)}
           onPointerMove={onTokenMove}
           onPointerUp={onTokenUp}
           onPointerCancel={onTokenUp}
         >
-          {t.highlight && <circle r={0.92} fill="none" stroke="#fcd34d" strokeWidth={0.12} opacity={0.95} />}
+          {t.highlight && (
+            <circle cx={t.x} cy={t.y} r={0.92} fill="none" stroke="#fcd34d" strokeWidth={0.12} opacity={0.95} />
+          )}
           <circle
+            cx={t.x}
+            cy={t.y}
             r={t.key === 'BALL' ? 0.38 : 0.68}
             fill={t.color}
             stroke="#fff"
             strokeWidth={0.07}
-            style={{ filter: 'drop-shadow(0 0.06px 0.12px rgba(0,0,0,0.25))' }}
+            style={{
+              filter: 'drop-shadow(0 0.06px 0.12px rgba(0,0,0,0.25))',
+              transition: `cx ${t.transitionMs ?? transitionMs}ms linear, cy ${t.transitionMs ?? transitionMs}ms linear`,
+            }}
           />
-          <text textAnchor="middle" y={0.18} fontSize={0.45} fill="#fff" style={{ pointerEvents: 'none' }}>
+          <text
+            x={t.x}
+            y={t.y + 0.18}
+            textAnchor="middle"
+            fontSize={0.45}
+            fill="#fff"
+            style={{ pointerEvents: 'none' }}
+          >
             {t.label}
           </text>
         </g>

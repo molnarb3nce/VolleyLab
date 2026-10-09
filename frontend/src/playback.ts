@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CourtSetup, Point, startingPositions, tokenKey } from './court';
+import { onCourtTokenKey } from './rotation';
+import { Slot } from './types';
 import { TacticStep } from './types';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -54,7 +56,16 @@ export function usePlayback(setup: CourtSetup, steps: TacticStep[], base: Record
       const dest = { x: step.x, y: step.y };
       const duration = step.duration;
       const delay = Math.min(step.delay ?? 0, duration);
-      const actor = tokenKey(step.actorSide, step.slot);
+      const actor =
+        step.actorSide === 'OWN' && step.slot
+          ? onCourtTokenKey(
+              'OWN',
+              step.slot as Slot,
+              setup.ownFormation,
+              setup.rotation,
+              setup.liberoReplaces,
+            )
+          : tokenKey(step.actorSide, step.slot);
       const next = steps[index + 1];
       const isTouch = step.actorSide !== 'BALL' && TOUCH.has(step.action);
       const playerMs = Math.max(0, duration - delay);
