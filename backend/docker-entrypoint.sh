@@ -9,6 +9,9 @@ if [ -z "$JWT_SECRET" ]; then
   echo "FATAL: JWT_SECRET is not set."
   exit 1
 fi
+if [ -z "$CORS_ORIGIN" ] && [ -z "$FRONTEND_URL" ]; then
+  echo "WARN: CORS_ORIGIN (or FRONTEND_URL) is not set; only http://localhost:5173 is allowed."
+fi
 
 echo "Applying Prisma migrations..."
 if ! npx prisma migrate deploy; then
