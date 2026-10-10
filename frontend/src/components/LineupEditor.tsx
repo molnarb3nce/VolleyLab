@@ -10,24 +10,25 @@ interface Props {
   match: Match;
   formations: FormationsInfo;
   onChanged: () => void;
+  readOnly?: boolean;
 }
 
-export function LineupEditor({ match, formations, onChanged }: Props) {
+export function LineupEditor({ match, formations, onChanged, readOnly }: Props) {
   return (
     <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
       {match.teams.map((mt) => (
-        <SideLineup key={mt.id} match={match} matchTeam={mt} formations={formations} onChanged={onChanged} />
+        <SideLineup key={mt.id} match={match} matchTeam={mt} formations={formations} onChanged={onChanged} readOnly={readOnly} />
       ))}
     </Stack>
   );
 }
 
-function SideLineup({ match, matchTeam, formations, onChanged }: Props & { matchTeam: MatchTeam }) {
+function SideLineup({ match, matchTeam, formations, onChanged, readOnly }: Props & { matchTeam: MatchTeam }) {
   const { data: team } = useLoad(() => api.get<Team>(`/teams/${matchTeam.teamId}`), [matchTeam.teamId]);
   const { error, run } = useAction();
   const [formation, setFormation] = useState<Formation>(matchTeam.formation);
   const [assignment, setAssignment] = useState<Partial<Record<Slot, number>>>({});
-  const locked = match.status === 'FINISHED';
+  const locked = match.status === 'FINISHED' || readOnly;
 
   // Reset the form whenever the stored lineup changes.
   const stored = JSON.stringify([matchTeam.formation, matchTeam.lineup.map((l) => [l.slot, l.playerId])]);

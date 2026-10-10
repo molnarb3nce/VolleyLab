@@ -12,7 +12,7 @@ export class StatisticsService {
 
   /** Statistics of one match per team and per player, optionally for a single set. */
   async forMatch(userId: number, matchId: number, setId?: number) {
-    const match = await this.matches.getOwnedMatch(userId, matchId);
+    const match = await this.matches.getMatch(matchId);
     if (setId !== undefined && !match.sets.some((s) => s.id === setId)) {
       throw new NotFoundException(`Set ${setId} not found in match ${matchId}`);
     }

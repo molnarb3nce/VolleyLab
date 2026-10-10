@@ -56,8 +56,8 @@ export class EventsService {
     });
   }
 
-  async findAll(userId: number, matchId: number) {
-    await this.matches.getOwnedMatch(userId, matchId);
+  async findAll(_userId: number, matchId: number) {
+    await this.matches.getMatch(matchId);
     return this.prisma.matchEvent.findMany({
       where: { matchId },
       orderBy: { id: 'asc' },

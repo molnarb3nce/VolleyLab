@@ -4,9 +4,9 @@ import { ErrorAlert, useAction } from '../hooks';
 import { Match, MatchSet } from '../types';
 
 /** Set scores are entered by hand (+1 / -1) and do not depend on the recorded events. */
-export function SetsPanel({ match, onChanged }: { match: Match; onChanged: () => void }) {
+export function SetsPanel({ match, onChanged, readOnly }: { match: Match; onChanged: () => void; readOnly?: boolean }) {
   const { error, run } = useAction();
-  const locked = match.status === 'FINISHED';
+  const locked = match.status === 'FINISHED' || readOnly;
   const [home, away] = [match.teams.find((t) => t.side === 'HOME'), match.teams.find((t) => t.side === 'AWAY')];
 
   const patch = (set: MatchSet, body: object) =>

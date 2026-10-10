@@ -62,6 +62,7 @@ export interface MatchSet {
 
 export interface Match {
   id: number;
+  ownerId: number;
   status: MatchStatus;
   playedAt: string;
   teams: MatchTeam[];

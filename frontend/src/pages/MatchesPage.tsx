@@ -1,7 +1,8 @@
 import {
   Button,
+  Checkbox,
   Chip,
-  Link as MuiLink,
+  FormControlLabel,
   MenuItem,
   Paper,
   Stack,
@@ -14,17 +15,24 @@ import {
   Typography,
 } from '@mui/material';
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
+import { useAuth } from '../auth';
 import { gradientBrandText } from '../glass';
 import { TableScroll } from '../components/TableScroll';
 import { FORMATION_LABEL, FORMATIONS } from '../constants';
 import { ErrorAlert, useAction, useLoad } from '../hooks';
+import { navTableRowSx } from '../table';
 import { Formation, Match, Team } from '../types';
 
 export function MatchesPage() {
   const navigate = useNavigate();
-  const { data: matches, error: loadError } = useLoad(() => api.get<Match[]>('/matches'), []);
+  const { session } = useAuth();
+  const [mine, setMine] = useState(false);
+  const { data: matches, error: loadError } = useLoad(
+    () => api.get<Match[]>(`/matches${mine ? '?mine=true' : ''}`),
+    [mine],
+  );
   const { data: teams } = useLoad(() => api.get<Team[]>('/teams'), []);
   const { error, run } = useAction();
   const [home, setHome] = useState({ teamId: '', formation: 'FIVE_ONE' as Formation });
@@ -87,20 +95,37 @@ export function MatchesPage() {
           You can use any team, also teams of other users. The lineup is set on the next page.
         </Typography>
       </Paper>
+      <FormControlLabel
+        control={<Checkbox checked={mine} onChange={(e) => setMine(e.target.checked)} />}
+        label="Only my matches"
+        sx={{ mb: 1 }}
+      />
       <TableScroll>
-        <Table size="small" sx={{ minWidth: 520 }}>
+        <Table size="small" sx={{ minWidth: 560 }}>
           <TableHead>
-            <TableRow><TableCell>Match</TableCell><TableCell>Date</TableCell><TableCell>Status</TableCell><TableCell>Sets</TableCell></TableRow>
+            <TableRow>
+              <TableCell>Match</TableCell>
+              <TableCell>Date</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Sets</TableCell>
+              <TableCell>Owner</TableCell>
+            </TableRow>
           </TableHead>
           <TableBody>
             {matches?.map((m) => {
               const [h, a] = [m.teams.find((t) => t.side === 'HOME'), m.teams.find((t) => t.side === 'AWAY')];
               return (
-                <TableRow key={m.id}>
-                  <TableCell><MuiLink component={Link} to={`/matches/${m.id}`}>{h?.team.name} vs {a?.team.name}</MuiLink></TableCell>
+                <TableRow
+                  key={m.id}
+                  hover
+                  sx={navTableRowSx}
+                  onClick={() => navigate(`/matches/${m.id}`)}
+                >
+                  <TableCell sx={{ fontWeight: 600 }}>{h?.team.name} vs {a?.team.name}</TableCell>
                   <TableCell>{new Date(m.playedAt).toLocaleString()}</TableCell>
                   <TableCell><Chip size="small" label={m.status} /></TableCell>
-                  <TableCell>{m.sets.map((s) => `${s.homeScore}:${s.awayScore}`).join('  ')}</TableCell>
+                  <TableCell>{m.sets.map((s) => `${s.homeScore}:${s.awayScore}`).join('  ') || '—'}</TableCell>
+                  <TableCell>{m.ownerId === session?.user.id ? 'you' : `user ${m.ownerId}`}</TableCell>
                 </TableRow>
               );
             })}

@@ -2,8 +2,6 @@ import {
   Button,
   Checkbox,
   FormControlLabel,
-  Link as MuiLink,
-  MenuItem,
   Stack,
   Table,
   TableBody,
@@ -14,15 +12,17 @@ import {
   Typography,
 } from '@mui/material';
 import { FormEvent, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { gradientBrandText } from '../glass';
 import { useAuth } from '../auth';
 import { TableScroll } from '../components/TableScroll';
 import { ErrorAlert, useAction, useLoad } from '../hooks';
+import { navTableRowSx } from '../table';
 import { Team } from '../types';
 
 export function TeamsPage() {
+  const navigate = useNavigate();
   const { session } = useAuth();
   const [mine, setMine] = useState(false);
   const [name, setName] = useState('');
@@ -71,8 +71,13 @@ export function TeamsPage() {
           </TableHead>
           <TableBody>
             {teams?.map((t) => (
-              <TableRow key={t.id}>
-                <TableCell><MuiLink component={Link} to={`/teams/${t.id}`}>{t.name}</MuiLink></TableCell>
+              <TableRow
+                key={t.id}
+                hover
+                sx={navTableRowSx}
+                onClick={() => navigate(`/teams/${t.id}`)}
+              >
+                <TableCell sx={{ fontWeight: 600 }}>{t.name}</TableCell>
                 <TableCell>{t._count?.players ?? 0}</TableCell>
                 <TableCell>{t.ownerId === session?.user.id ? 'you' : `user ${t.ownerId}`}</TableCell>
               </TableRow>

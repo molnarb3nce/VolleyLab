@@ -1,6 +1,6 @@
-import { Body, Controller, Get, Param, ParseEnumPipe, Patch, Post, Put } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseEnumPipe, Patch, Post, Put, Query } from '@nestjs/common';
 import { MatchSide } from '@prisma/client';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AuthUser, CurrentUser } from '../common/decorators/current-user.decorator';
 import { ParseIdPipe } from '../common/parse-id.pipe';
 import { CreateMatchDto, SetLineupDto, UpdateMatchDto } from './dto/match.dto';
@@ -18,8 +18,9 @@ export class MatchesController {
   }
 
   @Get()
-  findAll(@CurrentUser() user: AuthUser) {
-    return this.matches.findAll(user.id);
+  @ApiQuery({ name: 'mine', required: false, description: 'true = only matches I created' })
+  findAll(@CurrentUser() user: AuthUser, @Query('mine') mine?: string) {
+    return this.matches.findAll(user.id, mine === 'true');
   }
 
   @Get(':id')

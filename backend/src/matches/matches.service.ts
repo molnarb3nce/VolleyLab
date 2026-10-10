@@ -30,7 +30,10 @@ const NEXT_STATUS: Record<MatchStatus, MatchStatus | null> = {
   FINISHED: null,
 };
 
-/** Matches are private to their owner; other users get 404. */
+/**
+ * Every user can list and view any match (scores, lineups, stats).
+ * Only the match owner may change status, lineups, sets, or events.
+ */
 @Injectable()
 export class MatchesService {
   constructor(private readonly prisma: PrismaService) {}
@@ -60,16 +63,16 @@ export class MatchesService {
     });
   }
 
-  findAll(userId: number) {
+  findAll(userId: number, mineOnly: boolean) {
     return this.prisma.match.findMany({
-      where: { ownerId: userId },
+      where: mineOnly ? { ownerId: userId } : {},
       orderBy: { playedAt: 'desc' },
       include: matchInclude,
     });
   }
 
-  findOne(userId: number, matchId: number) {
-    return this.getOwnedMatch(userId, matchId);
+  findOne(_userId: number, matchId: number) {
+    return this.getMatch(matchId);
   }
 
   async update(userId: number, matchId: number, dto: UpdateMatchDto) {
@@ -131,13 +134,22 @@ export class MatchesService {
     return this.getOwnedMatch(userId, matchId);
   }
 
-  /** Returns the match with details if it belongs to the user; 404 otherwise. */
-  async getOwnedMatch(userId: number, matchId: number): Promise<MatchWithDetails> {
+  /** Returns the match with details; 404 if it does not exist. */
+  async getMatch(matchId: number): Promise<MatchWithDetails> {
     const match = await this.prisma.match.findUnique({
       where: { id: matchId },
       include: matchInclude,
     });
-    if (!match || match.ownerId !== userId) {
+    if (!match) {
+      throw new NotFoundException(`Match ${matchId} not found`);
+    }
+    return match;
+  }
+
+  /** Returns the match if it belongs to the user; 404 otherwise. */
+  async getOwnedMatch(userId: number, matchId: number): Promise<MatchWithDetails> {
+    const match = await this.getMatch(matchId);
+    if (match.ownerId !== userId) {
       throw new NotFoundException(`Match ${matchId} not found`);
     }
     return match;

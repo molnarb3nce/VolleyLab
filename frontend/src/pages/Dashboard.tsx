@@ -23,7 +23,7 @@ export function Dashboard() {
   const { data, error } = useLoad(async () => {
     const [teams, matches, tactics, overview] = await Promise.all([
       api.get<Team[]>('/teams?mine=true'),
-      api.get<Match[]>('/matches'),
+      api.get<Match[]>('/matches?mine=true'),
       api.get<Tactic[]>('/tactics'),
       api.get<StatisticsOverview>('/statistics/overview'),
     ]);

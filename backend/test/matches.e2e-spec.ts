@@ -96,18 +96,23 @@ describe('Formations and matches (e2e)', () => {
   });
 
   describe('privacy', () => {
-    it('lists and shows only the matches of the caller', async () => {
+    it('lists all matches but only the owner may edit', async () => {
       const a = await createTeam(alice, 'A');
       const b = await createTeam(alice, 'B');
       const match = await createMatch(alice, a.id, b.id);
 
       const bobList = await ctx.http().get('/matches').set(bearer(bob)).expect(200);
-      expect(bobList.body).toEqual([]);
-      await ctx.http().get(`/matches/${match.id}`).set(bearer(bob)).expect(404);
+      expect(bobList.body).toHaveLength(1);
+      await ctx.http().get(`/matches/${match.id}`).set(bearer(bob)).expect(200);
       await patchMatch(bob, match.id, { status: 'IN_PROGRESS' }).expect(404);
+
+      const bobMine = await ctx.http().get('/matches?mine=true').set(bearer(bob)).expect(200);
+      expect(bobMine.body).toEqual([]);
 
       const aliceList = await ctx.http().get('/matches').set(bearer(alice)).expect(200);
       expect(aliceList.body).toHaveLength(1);
+      const aliceMine = await ctx.http().get('/matches?mine=true').set(bearer(alice)).expect(200);
+      expect(aliceMine.body).toHaveLength(1);
     });
   });
 
