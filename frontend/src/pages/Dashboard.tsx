@@ -1,4 +1,5 @@
 import BoltIcon from '@mui/icons-material/Bolt';
+import FlashOnIcon from '@mui/icons-material/FlashOn';
 import GroupsIcon from '@mui/icons-material/Groups';
 import SportsIcon from '@mui/icons-material/Sports';
 import SportsVolleyballIcon from '@mui/icons-material/SportsVolleyball';
@@ -92,6 +93,31 @@ export function Dashboard() {
       </Paper>
 
       <ErrorAlert error={error} />
+
+      <Card
+        sx={{
+          mb: 3,
+          overflow: 'hidden',
+          border: `1px solid ${alpha('#22d3ee', 0.35)}`,
+          background: `linear-gradient(135deg, ${alpha('#6366f1', 0.22)} 0%, ${alpha('#0891b2', 0.12)} 100%)`,
+        }}
+      >
+        <CardActionArea component={Link} to="/quick-match">
+          <CardContent sx={{ py: 2.5 }}>
+            <Stack direction="row" alignItems="center" spacing={2}>
+              <FlashOnIcon sx={{ fontSize: 40, color: '#67e8f9' }} />
+              <Box flex={1}>
+                <Typography variant="h6" fontWeight={700}>
+                  Quick match
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Score a pickup game in seconds — random team names, no database, survives refresh on this device.
+                </Typography>
+              </Box>
+            </Stack>
+          </CardContent>
+        </CardActionArea>
+      </Card>
 
       <Grid container spacing={2.5} sx={{ mb: 3 }}>
         {cards.map((c, i) => (

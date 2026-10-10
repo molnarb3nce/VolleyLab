@@ -28,10 +28,12 @@ import { TacticEditorPage } from './pages/TacticEditorPage';
 import { TacticsPage } from './pages/TacticsPage';
 import { PlayerProfilePage } from './pages/PlayerProfilePage';
 import { TeamDetailPage } from './pages/TeamDetailPage';
+import { QuickMatchPage } from './pages/QuickMatchPage';
 import { TeamsPage } from './pages/TeamsPage';
 
 const NAV = [
   { label: 'Home', to: '/' },
+  { label: 'Quick match', to: '/quick-match' },
   { label: 'Teams', to: '/teams' },
   { label: 'Matches', to: '/matches' },
   { label: 'Tactics', to: '/tactics' },
@@ -188,6 +190,7 @@ export function App() {
         <Route path="teams" element={<TeamsPage />} />
         <Route path="teams/:id" element={<TeamDetailPage />} />
         <Route path="teams/:teamId/players/:playerId" element={<PlayerProfilePage />} />
+        <Route path="quick-match" element={<QuickMatchPage />} />
         <Route path="matches" element={<MatchesPage />} />
         <Route path="matches/:id" element={<MatchPage />} />
         <Route path="tactics" element={<TacticsPage />} />
