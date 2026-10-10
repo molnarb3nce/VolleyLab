@@ -118,16 +118,101 @@ function TeamScorePanel({
         },
       }}
     >
-      <Stack direction="row" alignItems="center" justifyContent="center" spacing={0.5} sx={{ mb: landscape ? 0 : 0.5 }}>
-        <Typography
-          variant={landscape ? 'body2' : compact ? 'subtitle1' : 'h6'}
-          fontWeight={700}
-          textAlign="center"
-          noWrap={landscape}
-          sx={{ maxWidth: landscape ? '85%' : '90%', lineHeight: 1.2 }}
+      {landscape ? (
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '100%',
+            flex: 1,
+            textAlign: 'center',
+          }}
         >
-          {name}
-        </Typography>
+          <Typography
+            variant="body2"
+            fontWeight={700}
+            noWrap
+            sx={{ maxWidth: '92%', lineHeight: 1.2, px: 4 }}
+          >
+            {name}
+          </Typography>
+          <Typography
+            component="p"
+            sx={{
+              fontSize: 'clamp(2.75rem, 52vmin, 5.5rem)',
+              fontWeight: 800,
+              lineHeight: 1,
+              fontVariantNumeric: 'tabular-nums',
+              letterSpacing: '-0.04em',
+              color: '#fff',
+              textShadow: `0 8px 32px ${alpha(accent, 0.55)}`,
+              '@keyframes scorePop': {
+                '0%': { transform: 'scale(1)' },
+                '40%': { transform: 'scale(1.06)' },
+                '100%': { transform: 'scale(1)' },
+              },
+              animation: 'scorePop 0.22s ease-out',
+            }}
+            key={score}
+          >
+            {score}
+          </Typography>
+        </Box>
+      ) : (
+        <>
+          <Stack direction="row" alignItems="center" justifyContent="center" spacing={0.5} sx={{ mb: 0.5 }}>
+            <Typography
+              variant={compact ? 'subtitle1' : 'h6'}
+              fontWeight={700}
+              textAlign="center"
+              sx={{ maxWidth: '90%', lineHeight: 1.2 }}
+            >
+              {name}
+            </Typography>
+            <IconButton
+              size="small"
+              aria-label={`Rename ${name}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onEditName();
+              }}
+              sx={{
+                color: alpha('#fff', 0.7),
+                '&:hover': { color: '#fff', background: alpha('#fff', 0.08) },
+              }}
+            >
+              <EditIcon fontSize="small" />
+            </IconButton>
+          </Stack>
+
+          <Typography
+            component="p"
+            sx={{
+              fontSize: compact ? 'clamp(3.5rem, 22vw, 6rem)' : 'clamp(4rem, 28vw, 7.5rem)',
+              fontWeight: 800,
+              lineHeight: 1,
+              textAlign: 'center',
+              fontVariantNumeric: 'tabular-nums',
+              letterSpacing: '-0.04em',
+              color: '#fff',
+              textShadow: `0 8px 32px ${alpha(accent, 0.55)}`,
+              '@keyframes scorePop': {
+                '0%': { transform: 'scale(1)' },
+                '40%': { transform: 'scale(1.06)' },
+                '100%': { transform: 'scale(1)' },
+              },
+              animation: 'scorePop 0.22s ease-out',
+            }}
+            key={score}
+          >
+            {score}
+          </Typography>
+        </>
+      )}
+
+      {landscape && (
         <IconButton
           size="small"
           aria-label={`Rename ${name}`}
@@ -136,40 +221,16 @@ function TeamScorePanel({
             onEditName();
           }}
           sx={{
+            position: 'absolute',
+            top: 6,
+            right: 8,
             color: alpha('#fff', 0.7),
             '&:hover': { color: '#fff', background: alpha('#fff', 0.08) },
           }}
         >
           <EditIcon fontSize="small" />
         </IconButton>
-      </Stack>
-
-      <Typography
-        component="p"
-        sx={{
-          fontSize: landscape
-            ? 'clamp(2.75rem, 52vmin, 5.5rem)'
-            : compact
-              ? 'clamp(3.5rem, 22vw, 6rem)'
-              : 'clamp(4rem, 28vw, 7.5rem)',
-          fontWeight: 800,
-          lineHeight: 1,
-          textAlign: 'center',
-          fontVariantNumeric: 'tabular-nums',
-          letterSpacing: '-0.04em',
-          color: '#fff',
-          textShadow: `0 8px 32px ${alpha(accent, 0.55)}`,
-          '@keyframes scorePop': {
-            '0%': { transform: 'scale(1)' },
-            '40%': { transform: 'scale(1.06)' },
-            '100%': { transform: 'scale(1)' },
-          },
-          animation: 'scorePop 0.22s ease-out',
-        }}
-        key={score}
-      >
-        {score}
-      </Typography>
+      )}
 
       {!landscape && (
         <Typography
@@ -312,32 +373,44 @@ export function QuickMatchPage() {
         }}
       >
         {phoneLandscape ? (
-          <Stack direction="row" alignItems="center" spacing={1} sx={{ minHeight: 40 }}>
-            <Typography variant="caption" fontWeight={700} sx={{ color: alpha('#fff', 0.55), flexShrink: 0 }}>
-              Set {setNo}
-            </Typography>
-            <Stack direction="row" alignItems="baseline" spacing={0.75} sx={{ flex: 1, justifyContent: 'center' }}>
-              <Typography variant="h6" fontWeight={800} sx={{ color: '#818cf8', fontVariantNumeric: 'tabular-nums' }}>
-                {won.home}
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: '1fr auto 1fr',
+              alignItems: 'center',
+              columnGap: 1,
+              minHeight: 40,
+            }}
+          >
+            <Box aria-hidden />
+            <Stack alignItems="center" spacing={0.25} sx={{ textAlign: 'center' }}>
+              <Typography variant="caption" fontWeight={700} sx={{ color: alpha('#fff', 0.55), letterSpacing: 0.5 }}>
+                Set {setNo}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
-                sets
-              </Typography>
-              <Typography variant="h6" fontWeight={800} sx={{ color: '#22d3ee', fontVariantNumeric: 'tabular-nums' }}>
-                {won.away}
-              </Typography>
+              <Stack direction="row" alignItems="baseline" justifyContent="center" spacing={0.75}>
+                <Typography variant="h6" fontWeight={800} sx={{ color: '#818cf8', fontVariantNumeric: 'tabular-nums' }}>
+                  {won.home}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  sets
+                </Typography>
+                <Typography variant="h6" fontWeight={800} sx={{ color: '#22d3ee', fontVariantNumeric: 'tabular-nums' }}>
+                  {won.away}
+                </Typography>
+              </Stack>
             </Stack>
-            <Button size="small" variant="contained" onClick={finishSet} sx={{ minWidth: 0, px: 1.5, flexShrink: 0 }}>
-              Finish
-            </Button>
-            <IconButton
-              aria-label="More actions"
-              size="small"
-              onClick={(e) => setMenuAnchor(e.currentTarget)}
-              sx={{ flexShrink: 0 }}
-            >
-              <MoreHorizIcon />
-            </IconButton>
+            <Stack direction="row" alignItems="center" justifyContent="flex-end" spacing={0.25}>
+              <Button size="small" variant="contained" onClick={finishSet} sx={{ minWidth: 0, px: 1.5 }}>
+                Finish
+              </Button>
+              <IconButton
+                aria-label="More actions"
+                size="small"
+                onClick={(e) => setMenuAnchor(e.currentTarget)}
+              >
+                <MoreHorizIcon />
+              </IconButton>
+            </Stack>
             <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={closeMenu}>
               <MenuItem
                 disabled={!canUndoSet}
@@ -374,7 +447,7 @@ export function QuickMatchPage() {
                 <ListItemText>New match</ListItemText>
               </MenuItem>
             </Menu>
-          </Stack>
+          </Box>
         ) : (
           <>
             <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
