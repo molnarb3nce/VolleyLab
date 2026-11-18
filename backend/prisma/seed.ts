@@ -82,6 +82,28 @@ async function setLineup(matchTeamId: number, roster: Roster) {
   });
 }
 
+type SeedStep = {
+  actorSide: ActorSide;
+  slot?: Slot | null;
+  targetSlot?: Slot | null;
+  action: TacticAction;
+  x: number;
+  y: number;
+  duration: number;
+  delay?: number;
+  parallelWithPrevious?: boolean;
+};
+
+/** Builds 1-based `stepNumber` rows for `TacticStep.createMany`-style nested creates. */
+function steps(rows: SeedStep[]) {
+  return rows.map((row, index) => ({
+    stepNumber: index + 1,
+    delay: row.delay ?? 0,
+    parallelWithPrevious: row.parallelWithPrevious ?? false,
+    ...row,
+  }));
+}
+
 async function createMatchSide(
   matchId: number,
   teamId: number,
@@ -246,50 +268,6 @@ async function main() {
     });
   }
 
-  const quickMiddleSteps = [
-    {
-      stepNumber: 1,
-      actorSide: 'OWN' as ActorSide,
-      slot: 'LIBERO' as Slot,
-      action: 'RECEIVE' as TacticAction,
-      x: 2,
-      y: 14,
-      duration: 700,
-      delay: 0,
-    },
-    {
-      stepNumber: 2,
-      actorSide: 'OWN' as ActorSide,
-      slot: 'SETTER_1' as Slot,
-      targetSlot: 'MIDDLE_1' as Slot,
-      action: 'SET' as TacticAction,
-      x: 4.5,
-      y: 10,
-      duration: 600,
-      delay: 100,
-    },
-    {
-      stepNumber: 3,
-      actorSide: 'OWN' as ActorSide,
-      slot: 'MIDDLE_1' as Slot,
-      action: 'ATTACK' as TacticAction,
-      x: 5,
-      y: 9,
-      duration: 500,
-      delay: 0,
-    },
-    {
-      stepNumber: 4,
-      actorSide: 'OPPONENT' as ActorSide,
-      slot: 'MIDDLE_2' as Slot,
-      action: 'BLOCK' as TacticAction,
-      x: 5,
-      y: 8,
-      duration: 450,
-      delay: 0,
-    },
-  ];
-
   await prisma.tactic.create({
     data: {
       ownerId: coach.id,
@@ -301,7 +279,34 @@ async function main() {
       opponentRotation: 1,
       liberoReplaces: 'MIDDLE_1',
       basePositions: { 'OWN:LIBERO': { x: 3, y: 16.5 }, BALL: { x: 4.5, y: 7 } },
-      steps: { create: quickMiddleSteps },
+      steps: {
+        create: steps([
+          { actorSide: 'OWN', slot: 'LIBERO', action: 'RECEIVE', x: 2, y: 14, duration: 700 },
+          { actorSide: 'OWN', slot: 'SETTER_1', targetSlot: 'MIDDLE_1', action: 'SET', x: 4.5, y: 10, duration: 600, delay: 100 },
+          { actorSide: 'OWN', slot: 'MIDDLE_1', action: 'ATTACK', x: 5, y: 9, duration: 500 },
+          { actorSide: 'OPPONENT', slot: 'MIDDLE_2', action: 'BLOCK', x: 5, y: 8, duration: 450 },
+        ]),
+      },
+    },
+  });
+
+  await prisma.tactic.create({
+    data: {
+      ownerId: coach.id,
+      name: 'K1 high ball outside',
+      description: 'Classic in-system pass; setter releases a high ball to OH1; block on the pin.',
+      formation: 'FIVE_ONE',
+      opponentFormation: 'FIVE_ONE',
+      rotation: 1,
+      liberoReplaces: 'MIDDLE_2',
+      steps: {
+        create: steps([
+          { actorSide: 'OWN', slot: 'LIBERO', action: 'RECEIVE', x: 3, y: 15.5, duration: 720 },
+          { actorSide: 'OWN', slot: 'SETTER_1', targetSlot: 'OUTSIDE_1', action: 'SET', x: 4.4, y: 10.2, duration: 620, delay: 80 },
+          { actorSide: 'OWN', slot: 'OUTSIDE_1', action: 'ATTACK', x: 1.2, y: 8.5, duration: 520 },
+          { actorSide: 'OPPONENT', slot: 'OUTSIDE_2', action: 'BLOCK', x: 1.5, y: 9.5, duration: 480 },
+        ]),
+      },
     },
   });
 
@@ -315,39 +320,101 @@ async function main() {
       rotation: 2,
       liberoReplaces: 'OUTSIDE_2',
       steps: {
-        create: [
-          {
-            stepNumber: 1,
-            actorSide: 'OWN',
-            slot: 'OUTSIDE_1',
-            action: 'RECEIVE',
-            x: 1.5,
-            y: 15,
-            duration: 750,
-            delay: 0,
-          },
-          {
-            stepNumber: 2,
-            actorSide: 'OWN',
-            slot: 'SETTER_1',
-            targetSlot: 'OPPOSITE',
-            action: 'SET',
-            x: 4.2,
-            y: 10.5,
-            duration: 650,
-            delay: 50,
-          },
-          {
-            stepNumber: 3,
-            actorSide: 'OWN',
-            slot: 'OPPOSITE',
-            action: 'ATTACK',
-            x: 4.8,
-            y: 9.2,
-            duration: 550,
-            delay: 0,
-          },
-        ],
+        create: steps([
+          { actorSide: 'OWN', slot: 'OUTSIDE_1', action: 'RECEIVE', x: 1.5, y: 15, duration: 750 },
+          { actorSide: 'OWN', slot: 'SETTER_1', targetSlot: 'OPPOSITE', action: 'SET', x: 4.2, y: 10.5, duration: 650, delay: 50 },
+          { actorSide: 'OWN', slot: 'OPPOSITE', action: 'ATTACK', x: 4.8, y: 9.2, duration: 550 },
+        ]),
+      },
+    },
+  });
+
+  await prisma.tactic.create({
+    data: {
+      ownerId: coach.id,
+      name: 'Setter hides, then releases',
+      description: 'Setter moves into position after pass, then sets opposite for a pipe attack.',
+      formation: 'FIVE_ONE',
+      opponentFormation: 'FIVE_ONE',
+      rotation: 3,
+      liberoReplaces: 'MIDDLE_1',
+      steps: {
+        create: steps([
+          { actorSide: 'OWN', slot: 'LIBERO', action: 'RECEIVE', x: 6.5, y: 14.8, duration: 700 },
+          { actorSide: 'OWN', slot: 'SETTER_1', action: 'MOVE', x: 4.6, y: 10.8, duration: 500, delay: 120 },
+          { actorSide: 'OWN', slot: 'SETTER_1', targetSlot: 'OPPOSITE', action: 'SET', x: 4.5, y: 10.5, duration: 550 },
+          { actorSide: 'OWN', slot: 'OPPOSITE', action: 'ATTACK', x: 5.2, y: 14.2, duration: 580 },
+          { actorSide: 'OPPONENT', slot: 'MIDDLE_1', action: 'BLOCK', x: 5, y: 10.5, duration: 450 },
+        ]),
+      },
+    },
+  });
+
+  await prisma.tactic.create({
+    data: {
+      ownerId: coach.id,
+      name: '6-2 push to pin',
+      description: '6-2 formation: back-row setter delivers a high ball to OH2.',
+      formation: 'SIX_TWO',
+      opponentFormation: 'FIVE_ONE',
+      rotation: 4,
+      opponentRotation: 2,
+      liberoReplaces: 'MIDDLE_2',
+      steps: {
+        create: steps([
+          { actorSide: 'OWN', slot: 'LIBERO', action: 'RECEIVE', x: 7, y: 15, duration: 710 },
+          { actorSide: 'OWN', slot: 'SETTER_2', targetSlot: 'OUTSIDE_2', action: 'SET', x: 5.5, y: 10, duration: 600, delay: 90 },
+          { actorSide: 'OWN', slot: 'OUTSIDE_2', action: 'ATTACK', x: 7.8, y: 8.8, duration: 530 },
+          { actorSide: 'OPPONENT', slot: 'OUTSIDE_1', action: 'BLOCK', x: 7.2, y: 9.2, duration: 460 },
+        ]),
+      },
+    },
+  });
+
+  await prisma.tactic.create({
+    data: {
+      ownerId: coach.id,
+      name: '4-2 quick middle',
+      description: '4-2 system: front-row setter runs a one-ball to MB1.',
+      formation: 'FOUR_TWO',
+      opponentFormation: 'FOUR_TWO',
+      rotation: 1,
+      opponentRotation: 1,
+      liberoReplaces: 'OUTSIDE_2',
+      steps: {
+        create: steps([
+          { actorSide: 'OWN', slot: 'OUTSIDE_1', action: 'RECEIVE', x: 2, y: 15.2, duration: 740 },
+          { actorSide: 'OWN', slot: 'SETTER_1', targetSlot: 'MIDDLE_1', action: 'SET', x: 4.3, y: 9.8, duration: 580, delay: 70 },
+          { actorSide: 'OWN', slot: 'MIDDLE_1', action: 'ATTACK', x: 4.6, y: 8.6, duration: 500 },
+          { actorSide: 'OPPONENT', slot: 'MIDDLE_2', action: 'BLOCK', x: 4.5, y: 9.8, duration: 440 },
+        ]),
+      },
+    },
+  });
+
+  await prisma.tactic.create({
+    data: {
+      ownerId: coach.id,
+      name: 'Slide + block read',
+      description: 'Outside pipe receive; setter moves; MB1 attacks short as middles commit.',
+      formation: 'FIVE_ONE',
+      opponentFormation: 'FIVE_ONE',
+      rotation: 5,
+      opponentRotation: 4,
+      liberoReplaces: 'MIDDLE_2',
+      basePositions: {
+        BALL: { x: 4.5, y: 17 },
+        'OPPONENT:MIDDLE_1': { x: 3.5, y: 9.5 },
+        'OPPONENT:MIDDLE_2': { x: 5.5, y: 9.5 },
+      },
+      steps: {
+        create: steps([
+          { actorSide: 'OWN', slot: 'LIBERO', action: 'RECEIVE', x: 5.5, y: 15, duration: 680 },
+          { actorSide: 'OWN', slot: 'SETTER_1', action: 'MOVE', x: 3.8, y: 10.2, duration: 480, delay: 100 },
+          { actorSide: 'OWN', slot: 'SETTER_1', targetSlot: 'MIDDLE_1', action: 'SET', x: 3.9, y: 10, duration: 520 },
+          { actorSide: 'OWN', slot: 'MIDDLE_1', action: 'ATTACK', x: 3.5, y: 8.8, duration: 510 },
+          { actorSide: 'OPPONENT', slot: 'MIDDLE_1', action: 'BLOCK', x: 3.6, y: 9.2, duration: 420 },
+        ]),
       },
     },
   });
@@ -355,17 +422,26 @@ async function main() {
   await prisma.tactic.create({
     data: {
       ownerId: rival.id,
-      name: 'Opponent slide (draft)',
+      name: 'Vienna counter: high ball OH',
+      description: 'Simple receive–set–attack template for the Vienna roster.',
       formation: 'FIVE_ONE',
       opponentFormation: 'FIVE_ONE',
-      steps: { create: [] },
+      rotation: 1,
+      liberoReplaces: 'MIDDLE_1',
+      steps: {
+        create: steps([
+          { actorSide: 'OWN', slot: 'LIBERO', action: 'RECEIVE', x: 4, y: 15, duration: 700 },
+          { actorSide: 'OWN', slot: 'SETTER_1', targetSlot: 'OUTSIDE_1', action: 'SET', x: 4.5, y: 10, duration: 600 },
+          { actorSide: 'OWN', slot: 'OUTSIDE_1', action: 'ATTACK', x: 2, y: 9, duration: 520 },
+        ]),
+      },
     },
   });
 
   console.log('\nDatabase seeded successfully.\n');
   console.log('Demo logins (password for both: %s)', DEMO_PASSWORD);
-  console.log('  coach@volleylab.local  — 3 teams, 3 matches, 2 tactics');
-  console.log('  rival@volleylab.local  — 1 team, 1 draft tactic\n');
+  console.log('  coach@volleylab.local  — 3 teams, 3 matches, 7 tactics (5-1 / 6-2 / 4-2 examples)');
+  console.log('  rival@volleylab.local  — 1 team, 1 tactic\n');
 }
 
 main()

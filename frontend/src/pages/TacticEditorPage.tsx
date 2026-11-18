@@ -697,6 +697,10 @@ function ValidateAndPlay({
     Object.fromEntries(Object.entries(playback.transitions).map(([key, ms]) => [key, { transitionMs: ms }])),
   );
 
+  const playNeedsTeamValidation = Boolean(teamId);
+  const canPlay =
+    steps.length > 0 && !playback.playing && (!playNeedsTeamValidation || result?.valid === true);
+
   return (
     <Grid container spacing={2.5}>
       <Grid item xs={12} md={6}>
@@ -775,19 +779,15 @@ function ValidateAndPlay({
             Preview
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-            Players start at their base positions. Contacts move the ball; attacks continue over the net.
+            Players start at their base positions. Contacts move the ball; attacks continue over the net. If you
+            picked a team for validation, run <strong>Validate</strong> successfully before <strong>Play</strong>.
           </Typography>
           <Box sx={{ display: 'flex', justifyContent: 'center' }}>
             <Court tokens={playbackTokens} />
           </Box>
           <Divider sx={{ my: 2 }} />
           <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-            <Button
-              variant="contained"
-              startIcon={<PlayArrowIcon />}
-              disabled={steps.length === 0 || playback.playing}
-              onClick={playback.play}
-            >
+            <Button variant="contained" startIcon={<PlayArrowIcon />} disabled={!canPlay} onClick={playback.play}>
               Play
             </Button>
             <Button startIcon={<RestartAltIcon />} onClick={playback.reset}>

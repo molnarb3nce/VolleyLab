@@ -1,0 +1,15 @@
+---
+description: VolleyLab domain, layout, and change conventions
+alwaysApply: true
+---
+
+# VolleyLab
+
+Read `AGENTS.md` and `project-context.md` before non-trivial work.
+
+- Backend rules live in services and pure modules (`formations/`, `tactic-rules.ts`, `event-rules.ts`, `statistics.ts`), not controllers.
+- Court coordinates: x 0..9, y 0..18; keep backend DTOs and frontend `Court` in sync.
+- Teams: shared read, owner write. Matches: anyone can view; only owner edits events/lineups/scores.
+- Tactics use formation **slots**, not player ids; play rules checked in `validatePlay` on `/tactics/:id/validate`.
+- Prefer minimal diffs; add a unit test when changing business rules.
+- Do not add physics/ML/microservices unless explicitly requested.
